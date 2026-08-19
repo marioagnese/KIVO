@@ -6,11 +6,13 @@ import { useEffect, useRef, useState } from "react";
 import type { Feature, LineString } from "geojson";
 
 import AccountModal from "@/components/AccountModal";
+import ProfileModal from "@/components/ProfileModal";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
 import {
   addDoc,
   collection,
+  getDoc,
   getDocs,
   query,
   where,
@@ -61,6 +63,7 @@ type Host = {
   rating: number;
   reviews: number;
   hostName: string;
+  hostBio?: string;
   coverage: "corridor" | "detour" | "destination";
   simulated?: boolean;
 
@@ -1039,6 +1042,12 @@ export default function Home() {
   const [accountModalRole, setAccountModalRole] =
     useState<"driver" | "host">("driver");
 
+  const [profileModalOpen, setProfileModalOpen] =
+    useState(false);
+
+  const [accountHome, setAccountHome] =
+    useState<"driver" | "host" | null>(null);
+
   function openAccountModal(
     role: "driver" | "host"
   ) {
@@ -1212,189 +1221,260 @@ export default function Home() {
 
       const loadedHosts: Host[] = [];
 
-      snapshot.forEach(
-        (documentSnapshot) => {
-          const data =
-            documentSnapshot.data();
+      for (
+        const documentSnapshot
+        of snapshot.docs
+      ) {
+        const data =
+          documentSnapshot.data();
 
-          // Only active marketplace listings belong
-          // in driver discovery.
-          if (
-            data?.status !== "active"
-          ) {
-            return;
-          }
-
-          const lng =
-            Number(
-              data?.coords?.lng
-            );
-
-          const lat =
-            Number(
-              data?.coords?.lat
-            );
-
-          if (
-            !Number.isFinite(lng) ||
-            !Number.isFinite(lat)
-          ) {
-            return;
-          }
-
-          const sessionPrice =
-            Number(
-              data?.pricing
-                ?.sessionPrice ?? 0
-            );
-
-          const connector =
-            String(
-              data?.charger
-                ?.connector ||
-                "Unknown"
-            );
-
-          const speed =
-            String(
-              data?.charger
-                ?.speed ||
-                "Unknown"
-            );
-
-          const startTime =
-            String(
-              data?.availability
-                ?.startTime || ""
-            );
-
-          const endTime =
-            String(
-              data?.availability
-                ?.endTime || ""
-            );
-
-          // The existing Host model uses a numeric ID.
-          // Generate a stable-enough negative ID for runtime
-          // while preserving the actual Firestore document ID.
-          let numericId = 0;
-
-          for (
-            const char
-            of documentSnapshot.id
-          ) {
-            numericId =
-              (
-                numericId * 31 +
-                char.charCodeAt(0)
-              ) %
-              1000000000;
-          }
-
-          loadedHosts.push({
-            id:
-              -Math.max(
-                1,
-                numericId
-              ),
-
-            firestoreId:
-              documentSnapshot.id,
-
-            ownerUid:
-              String(
-                data?.ownerUid || ""
-              ),
-
-            real:
-              true,
-
-            simulated:
-              false,
-
-            area:
-              String(
-                data?.area ||
-                data?.locationLabel ||
-                "KIVO Host"
-              ),
-
-            state:
-              String(
-                data?.state || ""
-              ),
-
-            coords: [
-              lng,
-              lat,
-            ],
-
-            price:
-              Number.isFinite(
-                sessionPrice
-              )
-                ? sessionPrice
-                : 0,
-
-            charger:
-              `Level 2 · ${connector}`,
-
-            speed,
-
-            availability:
-              startTime &&
-              endTime
-                ? `${startTime} – ${endTime}`
-                : "Host availability",
-
-            access:
-              String(
-                data?.access ||
-                "Host property"
-              ),
-
-            amenities:
-              Array.isArray(
-                data?.amenities
-              )
-                ? data.amenities.filter(
-                    (
-                      amenity: unknown
-                    ): amenity is string =>
-                      typeof amenity ===
-                      "string"
-                  )
-                : [],
-
-            // New real listings have no reviews yet.
-            // Keep neutral values rather than invent ratings.
-            rating:
-              typeof data?.rating ===
-                "number"
-                ? data.rating
-                : 0,
-
-            reviews:
-              typeof data?.reviews ===
-                "number"
-                ? data.reviews
-                : 0,
-
-            hostName:
-              "KIVO Host",
-
-            coverage:
-              "corridor",
-          });
+        // Only active marketplace listings belong
+        // in driver discovery.
+        if (
+          data?.status !== "active"
+        ) {
+          continue;
         }
-      );
+
+        const lng =
+          Number(
+            data?.coords?.lng
+          );
+
+        const lat =
+          Number(
+            data?.coords?.lat
+          );
+
+        if (
+          !Number.isFinite(lng) ||
+          !Number.isFinite(lat)
+        ) {
+          continue;
+        }
+
+        const ownerUid =
+          String(
+            data?.ownerUid || ""
+          );
+
+        let hostPublicName =
+          "KIVO Host";
+
+        let hostBio =
+          "";
+
+        // ----------------------------------------------------
+        // Resolve the listing owner into the KIVO user profile.
+        // This keeps Host identity centralized in users/{uid}.
+        // ----------------------------------------------------
+
+        if (ownerUid) {
+          try {
+            const profileSnapshot =
+              await getDoc(
+                doc(
+                  db,
+                  "users",
+                  ownerUid
+                )
+              );
+
+            if (
+              profileSnapshot.exists()
+            ) {
+              const profileData =
+                profileSnapshot.data();
+
+              const publicName =
+                typeof profileData
+                  ?.hostPublicName ===
+                  "string"
+                  ? profileData
+                      .hostPublicName
+                      .trim()
+                  : "";
+
+              const displayName =
+                typeof profileData
+                  ?.displayName ===
+                  "string"
+                  ? profileData
+                      .displayName
+                      .trim()
+                  : "";
+
+              const publicBio =
+                typeof profileData
+                  ?.hostBio ===
+                  "string"
+                  ? profileData
+                      .hostBio
+                      .trim()
+                  : "";
+
+              hostPublicName =
+                publicName ||
+                displayName ||
+                "KIVO Host";
+
+              hostBio =
+                publicBio;
+            }
+          } catch (profileError) {
+            console.error(
+              "Failed to load KIVO Host profile:",
+              profileError
+            );
+          }
+        }
+
+        const sessionPrice =
+          Number(
+            data?.pricing
+              ?.sessionPrice ?? 0
+          );
+
+        const connector =
+          String(
+            data?.charger
+              ?.connector ||
+              "Unknown"
+          );
+
+        const speed =
+          String(
+            data?.charger
+              ?.speed ||
+              "Unknown"
+          );
+
+        const startTime =
+          String(
+            data?.availability
+              ?.startTime || ""
+          );
+
+        const endTime =
+          String(
+            data?.availability
+              ?.endTime || ""
+          );
+
+        let numericId = 0;
+
+        for (
+          const char
+          of documentSnapshot.id
+        ) {
+          numericId =
+            (
+              numericId * 31 +
+              char.charCodeAt(0)
+            ) %
+            1000000000;
+        }
+
+        loadedHosts.push({
+          id:
+            -Math.max(
+              1,
+              numericId
+            ),
+
+          firestoreId:
+            documentSnapshot.id,
+
+          ownerUid,
+
+          real:
+            true,
+
+          simulated:
+            false,
+
+          area:
+            String(
+              data?.area ||
+              data?.locationLabel ||
+              "KIVO Host"
+            ),
+
+          state:
+            String(
+              data?.state || ""
+            ),
+
+          coords: [
+            lng,
+            lat,
+          ],
+
+          price:
+            Number.isFinite(
+              sessionPrice
+            )
+              ? sessionPrice
+              : 0,
+
+          charger:
+            `Level 2 · ${connector}`,
+
+          speed,
+
+          availability:
+            startTime &&
+            endTime
+              ? `${startTime} – ${endTime}`
+              : "Host availability",
+
+          access:
+            String(
+              data?.access ||
+              "Host property"
+            ),
+
+          amenities:
+            Array.isArray(
+              data?.amenities
+            )
+              ? data.amenities.filter(
+                  (
+                    amenity: unknown
+                  ): amenity is string =>
+                    typeof amenity ===
+                    "string"
+                )
+              : [],
+
+          rating:
+            typeof data?.rating ===
+              "number"
+              ? data.rating
+              : 0,
+
+          reviews:
+            typeof data?.reviews ===
+              "number"
+              ? data.reviews
+              : 0,
+
+          hostName:
+            hostPublicName,
+
+          hostBio,
+
+          coverage:
+            "corridor",
+        });
+      }
 
       setRealHosts(
         loadedHosts
       );
 
       console.log(
-        `✓ Loaded ${loadedHosts.length} real KIVO host listing(s)`
+        `✓ Loaded ${loadedHosts.length} real KIVO host listing(s) with profile identity`
       );
     } catch (err) {
       console.error(
@@ -2996,8 +3076,9 @@ export default function Home() {
                   return;
                 }
 
-                await loadDriverRequests();
-                setDriverInboxOpen(true);
+                setDriverInboxOpen(false);
+                setHostInboxOpen(false);
+                setAccountHome("driver");
               }}
               className="group rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 text-left transition hover:border-cyan-400/70 hover:bg-slate-900 sm:px-4 sm:py-3"
             >
@@ -3019,8 +3100,9 @@ export default function Home() {
                   return;
                 }
 
-                await loadHostRequests();
-                setHostInboxOpen(true);
+                setDriverInboxOpen(false);
+                setHostInboxOpen(false);
+                setAccountHome("host");
               }}
               className="group rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 text-left transition hover:border-emerald-400/70 hover:bg-slate-900 sm:px-4 sm:py-3"
             >
@@ -3056,6 +3138,15 @@ export default function Home() {
               )}
 
               <button
+                onClick={() =>
+                  setProfileModalOpen(true)
+                }
+                className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold text-slate-300 transition hover:border-emerald-400/60 hover:text-emerald-300"
+              >
+                My profile
+              </button>
+
+              <button
                 onClick={() => logout()}
                 className="text-slate-500 transition hover:text-white"
               >
@@ -3073,6 +3164,286 @@ export default function Home() {
           setAccountModalOpen(false)
         }
       />
+
+      <ProfileModal
+        open={profileModalOpen}
+        onClose={() =>
+          setProfileModalOpen(false)
+        }
+      />
+
+      {user && accountHome && (
+        <div className="fixed inset-0 z-[85] overflow-y-auto bg-slate-950">
+          <div className="min-h-screen">
+
+            <div className="border-b border-slate-800 bg-slate-950/95">
+              <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-5 sm:px-6">
+
+                <div>
+                  <p
+                    className={`text-xs font-bold uppercase tracking-[0.22em] ${
+                      accountHome === "driver"
+                        ? "text-cyan-400"
+                        : "text-emerald-400"
+                    }`}
+                  >
+                    {accountHome === "driver"
+                      ? "KivoDriver"
+                      : "KivoHost"}
+                  </p>
+
+                  <h1 className="mt-1 text-2xl font-bold">
+                    {accountHome === "driver"
+                      ? "Driver Home"
+                      : "Host Home"}
+                  </h1>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {hasRole("driver") && (
+                    <button
+                      onClick={() =>
+                        setAccountHome("driver")
+                      }
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        accountHome === "driver"
+                          ? "bg-cyan-400 text-slate-950"
+                          : "border border-slate-700 text-slate-300 hover:border-cyan-400"
+                      }`}
+                    >
+                      Driver
+                    </button>
+                  )}
+
+                  {hasRole("host") && (
+                    <button
+                      onClick={() =>
+                        setAccountHome("host")
+                      }
+                      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                        accountHome === "host"
+                          ? "bg-emerald-400 text-slate-950"
+                          : "border border-slate-700 text-slate-300 hover:border-emerald-400"
+                      }`}
+                    >
+                      Host
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() =>
+                      setAccountHome(null)
+                    }
+                    className="ml-2 rounded-full border border-slate-700 px-3 py-1.5 text-slate-400 transition hover:text-white"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+
+              {accountHome === "driver" && (
+                <>
+                  <div className="max-w-3xl">
+                    <p className="text-sm font-semibold text-cyan-400">
+                      YOUR NEIGHBORHOOD CHARGER
+                    </p>
+
+                    <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
+                      Where are you headed?
+                    </h2>
+
+                    <p className="mt-3 text-slate-400">
+                      Find a KIVO Host along your route or manage your charging trips.
+                    </p>
+                  </div>
+
+                  <div className="mt-8 grid gap-4 md:grid-cols-3">
+
+                    <button
+                      onClick={() => {
+                        setAccountHome(null);
+
+                        setTimeout(() => {
+                          document
+                            .getElementById(
+                              "route-discovery"
+                            )
+                            ?.scrollIntoView({
+                              behavior: "smooth",
+                            });
+                        }, 50);
+                      }}
+                      className="rounded-2xl border border-cyan-400/30 bg-cyan-400/10 p-6 text-left transition hover:border-cyan-400 hover:bg-cyan-400/15"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-400">
+                        DRIVE
+                      </p>
+
+                      <h3 className="mt-3 text-xl font-bold">
+                        Find a charger
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Search your route and discover nearby KIVO Hosts.
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        await loadDriverRequests();
+                        setAccountHome(null);
+                        setDriverInboxOpen(true);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-left transition hover:border-cyan-400/60"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        TRIPS
+                      </p>
+
+                      <h3 className="mt-3 text-xl font-bold">
+                        My trips
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        View pending, confirmed and completed charging sessions.
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setProfileModalOpen(true)
+                      }
+                      className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-left transition hover:border-cyan-400/60"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        ACCOUNT
+                      </p>
+
+                      <h3 className="mt-3 text-xl font-bold">
+                        Profile
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Manage your identity, vehicle and connector.
+                      </p>
+                    </button>
+
+                  </div>
+                </>
+              )}
+
+              {accountHome === "host" && (
+                <>
+                  <div className="max-w-3xl">
+                    <p className="text-sm font-semibold text-emerald-400">
+                      KIVO HOST
+                    </p>
+
+                    <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
+                      Manage your charging business
+                    </h2>
+
+                    <p className="mt-3 text-slate-400">
+                      Review requests, manage your charger and see your hosting activity.
+                    </p>
+                  </div>
+
+                  <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+
+                    <button
+                      onClick={async () => {
+                        await loadHostRequests();
+                        setAccountHome(null);
+                        setHostInboxOpen(true);
+                      }}
+                      className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 p-6 text-left transition hover:border-emerald-400 hover:bg-emerald-400/15"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-400">
+                        BOOKINGS
+                      </p>
+
+                      <h3 className="mt-3 text-xl font-bold">
+                        Requests
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Review and manage incoming charging requests.
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setAccountHome(null);
+                        setHostMode(true);
+                        setHostStep(1);
+                        setHostPublished(false);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-left transition hover:border-emerald-400/60"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        LISTING
+                      </p>
+
+                      <h3 className="mt-3 text-xl font-bold">
+                        Add charger
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Publish another charger to the KIVO marketplace.
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        await loadHostRequests();
+                        setAccountHome(null);
+                        setHostInboxOpen(true);
+                      }}
+                      className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-left transition hover:border-emerald-400/60"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        HISTORY
+                      </p>
+
+                      <h3 className="mt-3 text-xl font-bold">
+                        Hosting history
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Review accepted and completed charging sessions.
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setProfileModalOpen(true)
+                      }
+                      className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 text-left transition hover:border-emerald-400/60"
+                    >
+                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                        ACCOUNT
+                      </p>
+
+                      <h3 className="mt-3 text-xl font-bold">
+                        Profile
+                      </h3>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Manage your public Host identity and account.
+                      </p>
+                    </button>
+
+                  </div>
+                </>
+              )}
+
+            </div>
+          </div>
+        </div>
+      )}
 
       {driverInboxOpen && (
         <div className="fixed inset-0 z-[90] bg-slate-950/80 px-4 py-8 backdrop-blur-sm">
@@ -3304,7 +3675,9 @@ export default function Home() {
                           </p>
 
                           <p className="mt-2 text-sm leading-6 text-slate-300">
-                            Your charging request has been accepted.
+                            {completed
+                              ? "Your charging session has been completed."
+                              : "Your charging request has been accepted."}
                           </p>
 
                           {request.privateAddress &&
