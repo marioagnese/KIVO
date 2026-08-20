@@ -1697,7 +1697,16 @@ export default function Home() {
     });
   }
 
-  async function findRoute() {
+  type RouteSearchOverride = {
+    from: string;
+    fromRegion: string;
+    to: string;
+    toRegion: string;
+  };
+
+  async function findRoute(
+    routeOverride?: RouteSearchOverride
+  ) {
     const token =
       process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
@@ -1712,14 +1721,26 @@ export default function Home() {
       setShowOtherOptions(false);
       setRouteInfo(null);
 
+      const routeFrom =
+        routeOverride?.from ?? from;
+
+      const routeFromRegion =
+        routeOverride?.fromRegion ?? fromRegion;
+
+      const routeTo =
+        routeOverride?.to ?? to;
+
+      const routeToRegion =
+        routeOverride?.toRegion ?? toRegion;
+
       const start = await geocode(
-        from,
-        fromRegion
+        routeFrom,
+        routeFromRegion
       );
 
       const end = await geocode(
-        to,
-        toRegion
+        routeTo,
+        routeToRegion
       );
 
       const directionsUrl =
@@ -3062,10 +3083,12 @@ export default function Home() {
   }
 
 
-  async function findRouteAndShowMap() {
+  async function findRouteAndShowMap(
+    routeOverride?: RouteSearchOverride
+  ) {
     if (loading) return;
 
-    await findRoute();
+    await findRoute(routeOverride);
 
     requestAnimationFrame(() => {
       setTimeout(() => {
@@ -4347,7 +4370,7 @@ export default function Home() {
                 {/* FIND */}
                 <button
                   type="button"
-                  onClick={findRouteAndShowMap}
+                  onClick={() => void findRouteAndShowMap()}
                   disabled={loading}
                   className="m-1.5 inline-flex items-center justify-center gap-2 rounded-[18px] bg-emerald-400 px-7 py-5 text-base font-extrabold text-slate-950 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-300 disabled:cursor-wait disabled:opacity-70 sm:text-lg"
                 >
@@ -4503,88 +4526,147 @@ export default function Home() {
 
       <section
         id="route-discovery"
-        className="mx-auto min-h-screen max-w-7xl scroll-mt-[180px] px-4 py-16 sm:px-6 lg:py-20"
+        className="mx-auto min-h-screen max-w-7xl scroll-mt-[180px] px-4 py-12 sm:px-6 lg:py-16"
       >
-        <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-400">
-          Route discovery
-        </p>
 
-        <h1 className="mt-2 text-3xl font-bold">
-          Find charging along your trip
-        </h1>
+        {/* =====================================================
+            TRIP SUMMARY
+        ====================================================== */}
 
-        <p className="mt-2 text-slate-400">
-          See private Level 2 hosts near the route
-          you&apos;re already driving.
-        </p>
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
 
-        <div className="mt-6">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                Try a KIVO demo route
-              </p>
-              <p className="mt-1 text-sm text-slate-400">
-                Major corridors and one intentionally remote destination.
-              </p>
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-400">
+              Your trip
+            </p>
+
+            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              {from}
+              {fromRegion ? `, ${fromRegion}` : ""}
+              <span className="mx-3 text-slate-600">→</span>
+              {to}
+              {toRegion ? `, ${toRegion}` : ""}
+            </h1>
+
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-400 sm:text-base">
+              Find private neighborhood chargers along the route
+              you&apos;re already driving.
+            </p>
+          </div>
+
+
+          {routeInfo && (
+            <div className="flex flex-wrap gap-2 text-sm">
+
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/80 px-4 py-2 text-slate-200">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="h-4 w-4 text-cyan-400"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 18c3-8 8-4 10-10M15 8l2-3 2 3"
+                  />
+                </svg>
+
+                {routeInfo.miles} miles
+              </span>
+
+
+              <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/80 px-4 py-2 text-slate-200">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="h-4 w-4 text-cyan-400"
+                >
+                  <circle cx="12" cy="12" r="8" />
+                  <path
+                    strokeLinecap="round"
+                    d="M12 8v4l3 2"
+                  />
+                </svg>
+
+                ~{routeInfo.hours} hrs
+              </span>
+
+
+              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 font-semibold text-emerald-300">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="h-4 w-4"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"
+                  />
+                  <circle cx="12" cy="9" r="2.4" />
+                </svg>
+
+                {visibleHosts.length} KIVO{" "}
+                {visibleHosts.length === 1
+                  ? "Host"
+                  : "Hosts"}
+              </span>
+
             </div>
-          </div>
+          )}
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-2">
-            {demoTrips.map((trip) => (
-              <button
-                key={trip.label}
-                type="button"
-                onClick={() => {
-                  const start =
-                    splitPlaceRegion(trip.from);
-                  const destination =
-                    splitPlaceRegion(trip.to);
-
-                  setFrom(start.place);
-                  setFromRegion(start.region);
-                  setTo(destination.place);
-                  setToRegion(destination.region);
-
-                  setRouteInfo(null);
-                  setVisibleHosts([]);
-                  setSelectedHost(null);
-                }}
-                className="shrink-0 rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-3 text-left transition hover:border-emerald-400/60 hover:bg-slate-900"
-              >
-                <p className="text-sm font-semibold text-white">
-                  {trip.label}
-                </p>
-                <p className={`mt-1 text-[11px] ${
-                  trip.type === "Remote"
-                    ? "text-amber-400"
-                    : "text-slate-500"
-                }`}>
-                  {trip.type}
-                </p>
-              </button>
-            ))}
-          </div>
         </div>
 
-        <div className="mt-4 grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/60 p-3 sm:p-4 md:grid-cols-[1fr_auto_1fr_auto] md:items-end">
-          <div>
-            <label className="text-xs font-semibold text-slate-500">
-              FROM
-            </label>
 
-            <div className="mt-1 grid grid-cols-[1fr_110px] gap-2">
+        {/* =====================================================
+            CHANGE TRIP
+        ====================================================== */}
+
+        <div className="mt-7 rounded-2xl border border-white/10 bg-slate-900/55 p-3 shadow-xl shadow-black/10 sm:p-4">
+
+          <div className="mb-3 flex items-center justify-between gap-3">
+
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+                Change trip
+              </p>
+
+              <p className="mt-1 text-sm text-slate-400">
+                Search another route without leaving your results.
+              </p>
+            </div>
+
+          </div>
+
+
+          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto] md:items-center">
+
+            {/* FROM */}
+            <div className="grid min-w-0 grid-cols-[1fr_86px] gap-2">
+
               <input
                 value={from}
                 onChange={(e) =>
                   setFrom(e.target.value)
                 }
                 onKeyDown={(e) => {
-                  if (e.key === "Enter")
-                    findRoute();
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void findRouteAndShowMap();
+                  }
                 }}
-                placeholder="City, town, park..."
-                className="min-w-0 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-emerald-400"
+                placeholder="Starting city"
+                aria-label="Starting city"
+                className="min-w-0 w-full rounded-xl border border-slate-700 bg-[#020817] px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-400"
               />
 
               <select
@@ -4593,7 +4675,7 @@ export default function Home() {
                   setFromRegion(e.target.value)
                 }
                 aria-label="Origin state or province"
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 outline-none focus:border-emerald-400"
+                className="w-full rounded-xl border border-slate-700 bg-[#020817] px-3 py-3 text-white outline-none transition focus:border-cyan-400"
               >
                 <option value="">State</option>
 
@@ -4615,30 +4697,32 @@ export default function Home() {
                   </optgroup>
                 ))}
               </select>
+
             </div>
-          </div>
 
-          <div className="hidden pb-3 text-slate-500 md:block">
-            →
-          </div>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-500">
-              TO
-            </label>
+            <div className="hidden text-xl text-slate-600 md:block">
+              →
+            </div>
 
-            <div className="mt-1 grid grid-cols-[1fr_110px] gap-2">
+
+            {/* TO */}
+            <div className="grid min-w-0 grid-cols-[1fr_86px] gap-2">
+
               <input
                 value={to}
                 onChange={(e) =>
                   setTo(e.target.value)
                 }
                 onKeyDown={(e) => {
-                  if (e.key === "Enter")
-                    findRoute();
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    void findRouteAndShowMap();
+                  }
                 }}
-                placeholder="City, town, park..."
-                className="min-w-0 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 outline-none focus:border-emerald-400"
+                placeholder="Destination city"
+                aria-label="Destination city"
+                className="min-w-0 w-full rounded-xl border border-slate-700 bg-[#020817] px-4 py-3 text-white outline-none transition placeholder:text-slate-600 focus:border-emerald-400"
               />
 
               <select
@@ -4647,7 +4731,7 @@ export default function Home() {
                   setToRegion(e.target.value)
                 }
                 aria-label="Destination state or province"
-                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 outline-none focus:border-emerald-400"
+                className="w-full rounded-xl border border-slate-700 bg-[#020817] px-3 py-3 text-white outline-none transition focus:border-emerald-400"
               >
                 <option value="">State</option>
 
@@ -4669,19 +4753,120 @@ export default function Home() {
                   </optgroup>
                 ))}
               </select>
+
             </div>
+
+
+            <button
+              type="button"
+              onClick={() => void findRouteAndShowMap()}
+              disabled={loading}
+              className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-xl bg-emerald-400 px-6 py-3 font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-wait disabled:opacity-60"
+            >
+              {loading ? (
+                "Finding..."
+              ) : (
+                <>
+                  Find chargers
+
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    className="h-4 w-4"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 12h14M13 6l6 6-6 6"
+                    />
+                  </svg>
+                </>
+              )}
+            </button>
+
+          </div>
+        </div>
+
+
+        {/* =====================================================
+            SAMPLE ROUTES — SECONDARY, NOT PRIMARY
+        ====================================================== */}
+
+        <div className="mt-5">
+
+          <div className="flex items-center gap-2">
+
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4 text-slate-500"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M4 17 9 12l4 3 7-8"
+              />
+            </svg>
+
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Explore sample routes
+            </p>
+
           </div>
 
-          <button
-            onClick={findRoute}
-            disabled={loading}
-            className="rounded-xl bg-emerald-400 px-5 py-3 font-bold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-50"
-          >
-            {loading
-              ? "Finding..."
-              : "Find KIVO hosts"}
-          </button>
+
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
+
+            {demoTrips.map((trip) => (
+              <button
+                key={trip.label}
+                type="button"
+                onClick={() => {
+                  const start =
+                    splitPlaceRegion(trip.from);
+
+                  const destination =
+                    splitPlaceRegion(trip.to);
+
+                  const routeOverride: RouteSearchOverride = {
+                    from: start.place,
+                    fromRegion: start.region,
+                    to: destination.place,
+                    toRegion: destination.region,
+                  };
+
+                  setFrom(start.place);
+                  setFromRegion(start.region);
+                  setTo(destination.place);
+                  setToRegion(destination.region);
+
+                  void findRouteAndShowMap(
+                    routeOverride
+                  );
+                }}
+                className="shrink-0 rounded-full border border-slate-800 bg-slate-900/40 px-4 py-2 text-left transition hover:border-emerald-400/50 hover:bg-slate-900"
+              >
+                <span className="text-sm font-medium text-slate-300">
+                  {trip.label}
+                </span>
+
+                {trip.type === "Remote" && (
+                  <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-amber-400">
+                    Remote
+                  </span>
+                )}
+              </button>
+            ))}
+
+          </div>
         </div>
+
 
         {error && (
           <div className="mt-4 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
@@ -4689,37 +4874,6 @@ export default function Home() {
           </div>
         )}
 
-        {routeInfo && (
-          <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-400">
-              North America validation network
-            </p>
-            <p className="mt-1 text-sm text-slate-400">
-              Green pins include simulated KIVO hosts used to demonstrate how
-              route and destination coverage could work across the U.S. and Canada.
-            </p>
-          </div>
-        )}
-
-        {routeInfo && (
-          <div className="mt-4 flex flex-wrap gap-3 text-sm">
-            <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1">
-              {routeInfo.miles} miles
-            </span>
-
-            <span className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1">
-              ~{routeInfo.hours} hrs
-            </span>
-
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-emerald-400">
-              {visibleHosts.length} KIVO{" "}
-              {visibleHosts.length === 1
-                ? "host"
-                : "hosts"}{" "}
-              near this route
-            </span>
-          </div>
-        )}
 
         <div className="relative mt-5">
           <div
@@ -4988,6 +5142,34 @@ export default function Home() {
           })()}
         </div>
 
+        {routeInfo && (
+          <div className="mt-4 flex items-start gap-3 rounded-xl border border-white/[0.06] bg-slate-900/30 px-4 py-3">
+
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path
+                strokeLinecap="round"
+                d="M12 11v5M12 8h.01"
+              />
+            </svg>
+
+            <p className="text-xs leading-5 text-slate-500">
+              KIVO is currently in validation. Some map locations are simulated
+              to demonstrate route coverage; live Host listings are identified
+              separately in the marketplace.
+            </p>
+
+          </div>
+        )}
+
+
         {routeInfo &&
           visibleHosts.length > 0 &&
           (() => {
@@ -5038,7 +5220,7 @@ export default function Home() {
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">
-                      KivoDriver matches
+                      KIVO matches
                     </p>
 
                     <h2 className="mt-2 text-2xl font-bold sm:text-3xl">
@@ -5046,9 +5228,8 @@ export default function Home() {
                     </h2>
 
                     <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400 sm:text-base">
-                      Three clear recommendations based on
-                      route convenience, price, charging
-                      speed and host quality.
+                      Recommended options based on route convenience, price,
+                      charging speed and Host quality.
                     </p>
                   </div>
 
@@ -5311,14 +5492,13 @@ export default function Home() {
         {routeInfo &&
           visibleHosts.length === 0 && (
             <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/50 p-4 text-sm text-slate-400">
-              No sample KIVO hosts are currently
+              No KIVO Hosts are currently available
               within 12 miles of this route.
             </div>
           )}
 
         <p className="mt-4 text-sm text-slate-500">
-          Blue = origin · Orange = destination ·
-          Green = sample/simulated KIVO coverage near your route or destination
+          Blue = origin · Orange = destination · Green = KIVO Host location
         </p>
       </section>
 
