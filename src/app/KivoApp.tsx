@@ -1042,6 +1042,9 @@ export default function Home() {
   const [accountModalRole, setAccountModalRole] =
     useState<"driver" | "host">("driver");
 
+  const [accountModalMode, setAccountModalMode] =
+    useState<"signup" | "signin">("signup");
+
   const [profileModalOpen, setProfileModalOpen] =
     useState(false);
 
@@ -1049,9 +1052,11 @@ export default function Home() {
     useState<"driver" | "host" | null>(null);
 
   function openAccountModal(
-    role: "driver" | "host"
+    role: "driver" | "host",
+    mode: "signup" | "signin" = "signup"
   ) {
     setAccountModalRole(role);
+    setAccountModalMode(mode);
     setAccountModalOpen(true);
   }
 
@@ -1258,76 +1263,16 @@ export default function Home() {
             data?.ownerUid || ""
           );
 
-        let hostPublicName =
-          "KIVO Host";
+        const hostPublicName =
+          typeof data?.hostPublicName === "string" &&
+          data.hostPublicName.trim()
+            ? data.hostPublicName.trim()
+            : "KIVO Host";
 
-        let hostBio =
-          "";
-
-        // ----------------------------------------------------
-        // Resolve the listing owner into the KIVO user profile.
-        // This keeps Host identity centralized in users/{uid}.
-        // ----------------------------------------------------
-
-        if (ownerUid) {
-          try {
-            const profileSnapshot =
-              await getDoc(
-                doc(
-                  db,
-                  "users",
-                  ownerUid
-                )
-              );
-
-            if (
-              profileSnapshot.exists()
-            ) {
-              const profileData =
-                profileSnapshot.data();
-
-              const publicName =
-                typeof profileData
-                  ?.hostPublicName ===
-                  "string"
-                  ? profileData
-                      .hostPublicName
-                      .trim()
-                  : "";
-
-              const displayName =
-                typeof profileData
-                  ?.displayName ===
-                  "string"
-                  ? profileData
-                      .displayName
-                      .trim()
-                  : "";
-
-              const publicBio =
-                typeof profileData
-                  ?.hostBio ===
-                  "string"
-                  ? profileData
-                      .hostBio
-                      .trim()
-                  : "";
-
-              hostPublicName =
-                publicName ||
-                displayName ||
-                "KIVO Host";
-
-              hostBio =
-                publicBio;
-            }
-          } catch (profileError) {
-            console.error(
-              "Failed to load KIVO Host profile:",
-              profileError
-            );
-          }
-        }
+        const hostBio =
+          typeof data?.hostBio === "string"
+            ? data.hostBio.trim()
+            : "";
 
         const sessionPrice =
           Number(
@@ -2926,12 +2871,75 @@ export default function Home() {
           region
         );
 
+      // ------------------------------------------------------
+      // Marketplace identity snapshot
+      //
+      // users/{uid} remains private.
+      // Only public Host identity is copied into the listing.
+      // ------------------------------------------------------
+
+      let hostPublicName =
+        "KIVO Host";
+
+      let hostBio =
+        "";
+
+      try {
+        const profileSnapshot =
+          await getDoc(
+            doc(
+              db,
+              "users",
+              user.uid
+            )
+          );
+
+        if (
+          profileSnapshot.exists()
+        ) {
+          const profileData =
+            profileSnapshot.data();
+
+          const publicName =
+            typeof profileData?.hostPublicName ===
+            "string"
+              ? profileData.hostPublicName.trim()
+              : "";
+
+          const displayName =
+            typeof profileData?.displayName ===
+            "string"
+              ? profileData.displayName.trim()
+              : "";
+
+          hostPublicName =
+            publicName ||
+            displayName ||
+            "KIVO Host";
+
+          hostBio =
+            typeof profileData?.hostBio ===
+            "string"
+              ? profileData.hostBio.trim()
+              : "";
+        }
+      } catch (profileError) {
+        console.error(
+          "Unable to snapshot KIVO Host profile:",
+          profileError
+        );
+      }
+
       const hostDocument = {
         ownerUid:
           user.uid,
 
         ownerEmail:
           user.email || "",
+
+        // Public marketplace identity.
+        hostPublicName,
+        hostBio,
 
         status:
           "active",
@@ -3053,113 +3061,181 @@ export default function Home() {
     setHostPublishError("");
   }
 
+
+  async function findRouteAndShowMap() {
+    if (loading) return;
+
+    await findRoute();
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        mapContainer.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }, 100);
+    });
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center">
+      <header className="sticky top-0 z-40 border-b border-white/10 bg-[#020817]/95 backdrop-blur-xl">
+        <div className="mx-auto flex h-[92px] max-w-[1600px] items-center justify-between px-3 sm:h-[112px] sm:px-6 lg:h-[176px] lg:px-12">
+
+          <button
+            type="button"
+            onClick={() => {
+              setAccountHome(null);
+
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            }}
+            className="shrink-0"
+          >
             <img
               src="/kivo/kivo-wordmark.png"
-              alt="KIVO — Charge somewhere better"
-              className="h-32 w-auto object-contain sm:h-40 md:h-44"
+              alt="KIVO — Your Neighborhood Charger"
+              className="h-[72px] w-auto object-contain sm:h-[96px] lg:h-[184px]"
             />
-          </div>
+          </button>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              onClick={async () => {
-                if (
-                  !user ||
-                  !hasRole("driver")
-                ) {
-                  openAccountModal("driver");
-                  return;
+
+          {!user ? (
+            <nav className="flex shrink-0 items-center gap-2 lg:gap-4">
+
+              <button
+                type="button"
+                onClick={() => {
+                  document
+                    .getElementById("route-discovery")
+                    ?.scrollIntoView({
+                      behavior: "smooth",
+                      block: "start",
+                    });
+                }}
+                className="group hidden items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.06] px-5 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition hover:border-cyan-300/70 hover:bg-cyan-400/10 md:inline-flex lg:px-6 lg:text-base"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-cyan-300"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" />
+                  <circle cx="12" cy="9" r="2.4" />
+                </svg>
+                <span>Find a charger</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  openAccountModal(
+                    "host",
+                    "signup"
+                  )
                 }
+                className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] p-0 text-sm font-semibold text-white backdrop-blur-md transition hover:border-emerald-300/70 hover:bg-emerald-400/15 sm:h-auto sm:w-auto sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-emerald-300"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m3 11 9-7 9 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 9.5V20h13V9.5" />
+                  <path strokeLinecap="round" d="M12 11v6M9 14h6" />
+                </svg>
+                <span className="hidden sm:inline">Become a host</span>
+              </button>
 
-                setDriverInboxOpen(false);
-                setHostInboxOpen(false);
-                setAccountHome("driver");
-              }}
-              className="group rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 text-left transition hover:border-cyan-400/70 hover:bg-slate-900 sm:px-4 sm:py-3"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400 sm:text-xs">
-                KivoDriver
-              </p>
-              <p className="hidden text-xs text-slate-400 sm:block">
-                Find a charger
-              </p>
-            </button>
-
-            <button
-              onClick={async () => {
-                if (
-                  !user ||
-                  !hasRole("host")
-                ) {
-                  openAccountModal("host");
-                  return;
+              <button
+                type="button"
+                onClick={() =>
+                  openAccountModal(
+                    "driver",
+                    "signin"
+                  )
                 }
+                className="group inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:border-white/60 hover:bg-white/[0.12] sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-white/80"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10 17l5-5-5-5M15 12H3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5" />
+                </svg>
+                <span>Log in</span>
+              </button>
 
-                setDriverInboxOpen(false);
-                setHostInboxOpen(false);
-                setAccountHome("host");
-              }}
-              className="group rounded-xl border border-slate-700 bg-slate-900/50 px-3 py-2 text-left transition hover:border-emerald-400/70 hover:bg-slate-900 sm:px-4 sm:py-3"
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-400 sm:text-xs">
-                KivoHost
-              </p>
-              <p className="hidden text-xs text-slate-400 sm:block">
-                Share your charger
-              </p>
-            </button>
-          </div>
-        </div>
-        {user && (
-          <div className="border-t border-slate-800/60 bg-slate-950">
-            <div className="mx-auto flex max-w-7xl items-center justify-end gap-3 px-4 py-2 text-xs sm:px-6">
-              <span className="text-slate-500">
-                Signed in as
-              </span>
+            </nav>
+          ) : (
+            <nav className="flex items-center gap-3">
 
-              <span className="font-semibold text-slate-300">
-                {user.email}
-              </span>
+              {hasRole("driver") && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAccountHome("driver")
+                  }
+                  className="rounded-2xl border border-cyan-400/40 bg-slate-900/55 px-5 py-3 text-sm font-semibold text-cyan-300 transition hover:border-cyan-400"
+                >
+                  Driver
+                </button>
+              )}
 
-              {accountTypes.map(
-                (role) => (
-                  <span
-                    key={role}
-                    className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 font-semibold uppercase tracking-wide text-emerald-400"
-                  >
-                    {role}
-                  </span>
-                )
+              {hasRole("host") && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAccountHome("host")
+                  }
+                  className="rounded-2xl border border-emerald-400/40 bg-slate-900/55 px-5 py-3 text-sm font-semibold text-emerald-300 transition hover:border-emerald-400"
+                >
+                  Host
+                </button>
               )}
 
               <button
+                type="button"
                 onClick={() =>
                   setProfileModalOpen(true)
                 }
-                className="rounded-lg border border-slate-700 px-3 py-1.5 font-semibold text-slate-300 transition hover:border-emerald-400/60 hover:text-emerald-300"
+                className="hidden rounded-2xl border border-slate-700 bg-slate-900/55 px-5 py-3 text-sm font-semibold text-white transition hover:border-white sm:block"
               >
-                My profile
+                Profile
               </button>
 
               <button
+                type="button"
                 onClick={() => logout()}
-                className="text-slate-500 transition hover:text-white"
+                className="ml-2 text-sm text-slate-400 transition hover:text-white"
               >
                 Sign out
               </button>
-            </div>
-          </div>
-        )}
+
+            </nav>
+          )}
+
+        </div>
       </header>
 
       <AccountModal
         open={accountModalOpen}
         initialRole={accountModalRole}
+        initialMode={accountModalMode}
         onClose={() =>
           setAccountModalOpen(false)
         }
@@ -4068,252 +4144,366 @@ export default function Home() {
         </div>
       )}
 
-      <section className="border-b border-slate-800 bg-slate-950">
-        <div className="mx-auto grid max-w-7xl gap-7 px-4 py-10 sm:px-6 sm:py-14 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:gap-10 lg:py-20">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-400">
-              Private EV charging marketplace
+      {/* =====================================================
+          KIVO PUBLIC MARKETPLACE HERO
+      ====================================================== */}
+
+      <section className="relative min-h-[calc(100vh-92px)] overflow-hidden bg-[#020817] sm:min-h-[calc(100vh-112px)] lg:min-h-[calc(100vh-176px)]">
+
+        <img
+          src="/kivo/kivo-home-hero.png"
+          alt="Electric vehicle charging at a private neighborhood home"
+          className="absolute inset-0 h-full w-full object-cover object-[82%_center] sm:object-[68%_center] lg:object-[62%_center]"
+        />
+
+        {/* Cinematic overlays — keep the home visible while protecting the UI */}
+        <div className="absolute inset-0 bg-[#020817]/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#020817]/95 via-[#020817]/68 via-48% to-[#020817]/5" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#020817]/70 via-transparent to-[#020817]/16" />
+
+        <div className="relative mx-auto flex min-h-[calc(100vh-92px)] max-w-[1600px] items-center px-5 py-7 sm:min-h-[calc(100vh-112px)] sm:px-8 sm:py-10 lg:min-h-[calc(100vh-176px)] lg:px-12 lg:py-14">
+
+          <div className="w-full max-w-[1120px]">
+
+            <p className="text-sm font-extrabold uppercase tracking-[0.30em] text-emerald-300 sm:text-base lg:text-lg">
+              Your Neighborhood Charger
             </p>
 
-            <h1 className="mt-4 max-w-4xl text-3xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Private EV charging, along the route you&apos;re already driving.
+            <h1 className="mt-4 max-w-[900px] text-[40px] font-bold leading-[0.97] tracking-[-0.035em] text-white sm:text-6xl lg:mt-5 lg:text-[76px] xl:text-[86px]">
+              Charging should
+              <br />
+              feel like home.
             </h1>
 
-            <p className="mt-5 max-w-3xl text-base leading-7 text-slate-300 sm:mt-6 sm:text-lg sm:leading-8">
-              Discover available Level 2 chargers from verified local hosts —
-              with hosts controlling when, how, and under what rules their
-              charger is available.
+            <p className="mt-5 max-w-[790px] text-base leading-7 text-white/88 sm:text-xl sm:leading-8 lg:mt-6 lg:text-[21px]">
+              Private EV charging from local hosts — with more comfort,
+              control and confidence along your route.
             </p>
 
-            <div className="mt-6 flex flex-col gap-3 sm:mt-8 sm:flex-row">
-              <button
-                onClick={() => {
-                  document
-                    .getElementById("route-discovery")
-                    ?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="w-full rounded-xl bg-emerald-400 px-6 py-4 font-bold text-slate-950 transition hover:bg-emerald-300 sm:w-auto"
-              >
-                Find a charger
-              </button>
 
-              <button
-                onClick={() => {
-                  if (
-                    !user ||
-                    !hasRole("host")
-                  ) {
-                    openAccountModal("host");
-                    return;
-                  }
+            {/* ==================================================
+                MAIN SEARCH
+            =================================================== */}
 
-                  setHostMode(true);
-                  setHostStep(1);
-                  setHostPublished(false);
-                  setPublishedHostId(null);
-                  setHostPublishError("");
-                }}
-                className="w-full rounded-xl border border-slate-700 px-6 py-4 font-semibold transition hover:border-emerald-400 hover:text-emerald-400 sm:w-auto"
-              >
-                Become a host
-              </button>
+            <div className="mt-6 max-w-[1040px] rounded-[26px] border border-white/20 bg-white p-2 shadow-[0_24px_70px_rgba(0,0,0,0.40)] sm:mt-8">
+
+              <div className="grid md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_235px] md:items-stretch">
+
+                {/* FROM */}
+                <div className="flex items-center gap-4 rounded-[20px] px-6 py-4 sm:px-7 sm:py-5">
+
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-cyan-600">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.9"
+                      className="h-5 w-5"
+                    >
+                      <circle cx="12" cy="12" r="3" />
+                      <path
+                        strokeLinecap="round"
+                        d="M12 2v3M12 19v3M2 12h3M19 12h3"
+                      />
+                    </svg>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                      From
+                    </label>
+
+                    <div className="mt-1 flex min-w-0 items-center gap-2">
+
+                      <input
+                        value={from}
+                        onChange={(e) =>
+                          setFrom(e.target.value)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void findRouteAndShowMap();
+                          }
+                        }}
+                        placeholder="Starting city"
+                        aria-label="Starting city"
+                        className="min-w-0 flex-1 bg-transparent text-base font-bold text-slate-950 outline-none placeholder:text-slate-400 sm:text-lg"
+                      />
+
+                      <select
+                        value={fromRegion}
+                        onChange={(e) =>
+                          setFromRegion(e.target.value)
+                        }
+                        aria-label="Origin state or province"
+                        className="w-[72px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-bold text-slate-700 outline-none transition focus:border-cyan-400"
+                      >
+                        <option value="">State</option>
+
+                        {REGION_OPTIONS.map((group) => (
+                          <optgroup
+                            key={group.group}
+                            label={group.group}
+                          >
+                            {group.options.map(
+                              ([code, name]) => (
+                                <option
+                                  key={code}
+                                  value={code}
+                                >
+                                  {code}
+                                </option>
+                              )
+                            )}
+                          </optgroup>
+                        ))}
+                      </select>
+
+                    </div>
+                  </div>
+                </div>
+
+
+                {/* TO */}
+                <div className="flex items-center gap-4 rounded-[20px] border-t border-slate-200 px-6 py-4 sm:px-7 sm:py-5 md:border-l md:border-t-0">
+
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.9"
+                      className="h-5 w-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"
+                      />
+                      <circle cx="12" cy="9" r="2.4" />
+                    </svg>
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <label className="block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                      To
+                    </label>
+
+                    <div className="mt-1 flex min-w-0 items-center gap-2">
+
+                      <input
+                        value={to}
+                        onChange={(e) =>
+                          setTo(e.target.value)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void findRouteAndShowMap();
+                          }
+                        }}
+                        placeholder="Destination city"
+                        aria-label="Destination city"
+                        className="min-w-0 flex-1 bg-transparent text-base font-bold text-slate-950 outline-none placeholder:text-slate-400 sm:text-lg"
+                      />
+
+                      <select
+                        value={toRegion}
+                        onChange={(e) =>
+                          setToRegion(e.target.value)
+                        }
+                        aria-label="Destination state or province"
+                        className="w-[72px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-400"
+                      >
+                        <option value="">State</option>
+
+                        {REGION_OPTIONS.map((group) => (
+                          <optgroup
+                            key={group.group}
+                            label={group.group}
+                          >
+                            {group.options.map(
+                              ([code, name]) => (
+                                <option
+                                  key={code}
+                                  value={code}
+                                >
+                                  {code}
+                                </option>
+                              )
+                            )}
+                          </optgroup>
+                        ))}
+                      </select>
+
+                    </div>
+                  </div>
+                </div>
+
+
+                {/* FIND */}
+                <button
+                  type="button"
+                  onClick={findRouteAndShowMap}
+                  disabled={loading}
+                  className="m-1.5 inline-flex items-center justify-center gap-2 rounded-[18px] bg-emerald-400 px-7 py-5 text-base font-extrabold text-slate-950 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-300 disabled:cursor-wait disabled:opacity-70 sm:text-lg"
+                >
+                  <span>
+                    {loading
+                      ? "Finding..."
+                      : "Find chargers"}
+                  </span>
+
+                  {!loading && (
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      className="h-5 w-5"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M5 12h14M13 6l6 6-6 6"
+                      />
+                    </svg>
+                  )}
+                </button>
+
+              </div>
             </div>
 
-            <div className="mt-6 hidden flex-wrap gap-3 text-sm text-slate-400 sm:flex lg:mt-8">
-              <span className="rounded-full border border-slate-800 bg-slate-900/60 px-4 py-2">
-                Route-based discovery
-              </span>
-              <span className="rounded-full border border-slate-800 bg-slate-900/60 px-4 py-2">
-                Level 2 home chargers
-              </span>
-              <span className="rounded-full border border-slate-800 bg-slate-900/60 px-4 py-2">
-                Host-controlled availability
-              </span>
-            </div>
-          </div>
 
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 shadow-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-400">
-              How KIVO works
-            </p>
+            {/* ==================================================
+                TRUST / EXPERIENCE CARDS
+            =================================================== */}
 
-            <div className="mt-6 space-y-5">
-              <div className="rounded-2xl bg-slate-950 p-5">
-                <p className="text-sm font-semibold text-emerald-400">
-                  01 · Plan your trip
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Enter where you&apos;re going and see private chargers close
-                  to the route you&apos;re already taking.
-                </p>
-              </div>
+            <div className="mt-5 grid max-w-[1080px] gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
 
-              <div className="rounded-2xl bg-slate-950 p-5">
-                <p className="text-sm font-semibold text-emerald-400">
-                  02 · Choose a host
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Compare detour time, charger type, price, availability,
-                  amenities, and host rules.
-                </p>
-              </div>
+              <div className="flex gap-3 rounded-2xl border border-white/15 bg-[#020817]/72 px-4 py-4 shadow-lg shadow-black/10 backdrop-blur-md">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-300">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m3 11 9-7 9 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 9.5V20h13V9.5M9 20v-6h6v6" />
+                  </svg>
+                </div>
 
-              <div className="rounded-2xl bg-slate-950 p-5">
-                <p className="text-sm font-semibold text-emerald-400">
-                  03 · Request your session
-                </p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">
-                  Select a time and request access. The host stays in control of
-                  every booking.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-b border-slate-800 bg-slate-900/20">
-        <div className="mx-auto max-w-7xl px-6 py-14 lg:py-20">
-
-          <div className="grid overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 lg:grid-cols-2">
-            <div className="relative min-h-[360px] overflow-hidden sm:min-h-[460px]">
-              <img
-                src="/kivo/driveway-host.png"
-                alt="Home EV charger installed beside a residential driveway"
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-
-              <div className="absolute bottom-5 left-5 right-5 rounded-2xl border border-white/10 bg-slate-950/75 p-4 backdrop-blur">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
-                  Capacity already exists
-                </p>
-                <p className="mt-1 text-sm leading-6 text-slate-200">
-                  Millions of hours of home charging capacity sit unused every day.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-400">
-                The KIVO idea
-              </p>
-
-              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                Charging infrastructure doesn&apos;t always need to be built.
-              </h2>
-
-              <p className="mt-5 text-lg leading-8 text-slate-300">
-                Sometimes it simply needs to become discoverable.
-              </p>
-
-              <p className="mt-4 leading-7 text-slate-400">
-                KIVO explores a marketplace where homeowners can make existing
-                Level 2 chargers available during the hours they choose — while
-                drivers discover charging options close to trips they&apos;re
-                already taking.
-              </p>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                  <p className="text-2xl font-bold text-emerald-400">01</p>
-                  <p className="mt-2 font-semibold">Existing chargers</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Use capacity already installed.
+                <div>
+                  <p className="font-bold text-white">
+                    Private &amp; local
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Your space. Your time.
                   </p>
                 </div>
+              </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                  <p className="text-2xl font-bold text-emerald-400">02</p>
-                  <p className="mt-2 font-semibold">Host control</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Schedule, access and rules stay with the owner.
-                  </p>
+
+              <div className="flex gap-3 rounded-2xl border border-white/15 bg-[#020817]/72 px-4 py-4 shadow-lg shadow-black/10 backdrop-blur-md">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-400/10 text-emerald-300">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-4" />
+                  </svg>
                 </div>
 
-                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                  <p className="text-2xl font-bold text-emerald-400">03</p>
-                  <p className="mt-2 font-semibold">Route relevance</p>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Find options without unnecessary detours.
+                <div>
+                  <p className="font-bold text-white">
+                    Host-controlled access
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Hosts control availability and access.
                   </p>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-8 grid overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/60 lg:grid-cols-[0.9fr_1.1fr]">
-            <div className="order-2 flex flex-col justify-center p-7 sm:p-10 lg:order-1 lg:p-12">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-400">
-                A different kind of network
-              </p>
 
-              <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-                What if the charger you need is already nearby?
-              </h2>
-
-              <p className="mt-5 leading-7 text-slate-400">
-                KIVO is not trying to replace public fast charging. It explores
-                another layer of charging availability — privately owned Level 2
-                chargers that could become useful when location, timing and
-                convenience make sense.
-              </p>
-
-              <div className="mt-7 space-y-4">
-                <div className="flex gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-bold text-emerald-400">
-                    ✓
-                  </div>
-                  <div>
-                    <p className="font-semibold">Hosts choose availability</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      No open-ended access to someone&apos;s property.
-                    </p>
-                  </div>
+              <div className="flex gap-3 rounded-2xl border border-white/15 bg-[#020817]/72 px-4 py-4 shadow-lg shadow-black/10 backdrop-blur-md">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-300">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                    <circle cx="10" cy="8" r="3" />
+                    <path strokeLinecap="round" d="M4 19c.6-3.1 2.6-5 6-5 1.3 0 2.4.3 3.3.8" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m15 17 2 2 4-5" />
+                  </svg>
                 </div>
 
-                <div className="flex gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-bold text-emerald-400">
-                    ✓
-                  </div>
-                  <div>
-                    <p className="font-semibold">Drivers see the detour first</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Distance and estimated time off-route are visible before requesting.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex gap-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 font-bold text-emerald-400">
-                    ✓
-                  </div>
-                  <div>
-                    <p className="font-semibold">Each stop can be different</p>
-                    <p className="mt-1 text-sm text-slate-500">
-                      Charger-only or optional amenities such as Wi-Fi, coffee or workspace.
-                    </p>
-                  </div>
+                <div>
+                  <p className="font-bold text-white">
+                    Real profiles
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Real hosts. Marketplace history.
+                  </p>
                 </div>
               </div>
+
+
+              <div className="flex gap-3 rounded-2xl border border-white/15 bg-[#020817]/72 px-4 py-4 shadow-lg shadow-black/10 backdrop-blur-md">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300/25 bg-emerald-400/10 text-emerald-300">
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                    <circle cx="5" cy="18" r="2" />
+                    <circle cx="19" cy="6" r="2" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 18h3c5 0 2-12 7-12" />
+                  </svg>
+                </div>
+
+                <div>
+                  <p className="font-bold text-white">
+                    On your route
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                    Convenient stops where you need them.
+                  </p>
+                </div>
+              </div>
+
             </div>
 
-            <div className="order-1 relative min-h-[330px] overflow-hidden lg:order-2 lg:min-h-[520px]">
-              <img
-                src="/kivo/neighborhood-network.png"
-                alt="Residential neighborhood representing nearby private EV charging hosts"
-                className="absolute inset-0 h-full w-full object-cover"
-              />
+
+            {/* ==================================================
+                SAFETY / TRUST MESSAGE
+            =================================================== */}
+
+            <div className="mt-4 inline-flex max-w-[800px] items-center gap-4 rounded-2xl border border-white/12 bg-[#020817]/76 px-5 py-3.5 shadow-lg shadow-black/10 backdrop-blur-md">
+
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-emerald-300/30 bg-emerald-400/10 text-emerald-300">
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="h-6 w-6"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m9 12 2 2 4-4" />
+                </svg>
+              </div>
+
+              <div>
+                <p className="font-bold text-white">
+                  Built with safety and trust at the core.
+                </p>
+
+                <p className="mt-0.5 text-sm leading-5 text-slate-300">
+                  KIVO helps Drivers and Hosts make more informed charging connections.
+                </p>
+              </div>
+
             </div>
+
           </div>
-
         </div>
       </section>
 
       <section
         id="route-discovery"
-        className="mx-auto max-w-7xl scroll-mt-6 px-4 py-10 sm:px-6"
+        className="mx-auto min-h-screen max-w-7xl scroll-mt-[180px] px-4 py-16 sm:px-6 lg:py-20"
       >
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-400">
           Route discovery
@@ -5674,7 +5864,7 @@ export default function Home() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
-                          Verified KIVO Host
+                          KIVO Host
                         </p>
                         <h2 className="mt-1 text-2xl font-bold">
                           {hostForm.location}
