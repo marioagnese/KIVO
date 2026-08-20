@@ -25,12 +25,16 @@ type AccountModalProps = {
   initialRole?:
     KivoAccountRole;
 
+  initialMode?:
+    "signup" | "signin";
+
   onClose: () => void;
 };
 
 export default function AccountModal({
   open,
   initialRole = "driver",
+  initialMode = "signup",
   onClose,
 }: AccountModalProps) {
   const {
@@ -77,10 +81,13 @@ export default function AccountModal({
     // this modal becomes a role-adder.
     if (user) {
       setMode("signin");
+    } else {
+      setMode(initialMode);
     }
   }, [
     open,
     initialRole,
+    initialMode,
     user,
   ]);
 
