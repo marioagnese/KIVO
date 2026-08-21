@@ -355,53 +355,376 @@ export default function HostPage() {
 
 
       {/* =====================================================
-          CONTROL / PRIVACY
+          PROPERTY ACCESS / CONTROL
       ====================================================== */}
       <section className="bg-[#020817] text-white">
 
-        <div className="mx-auto max-w-[1500px] px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
+        <div className="mx-auto max-w-[1500px] px-5 py-20 sm:px-8 lg:px-10 lg:py-24">
 
-          <div className="max-w-3xl">
+          <div className="grid gap-12 lg:grid-cols-[0.82fr_1.18fr] lg:items-start">
 
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-400">
-              YOUR PROPERTY STAYS YOURS
-            </p>
+            {/* LEFT — MESSAGE */}
+            <div className="max-w-[580px]">
 
-            <h2 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-              Hosting does not mean opening your home.
-            </h2>
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-cyan-400">
+                YOUR PROPERTY STAYS YOURS
+              </p>
 
-            <p className="mt-5 text-lg leading-8 text-slate-400">
-              A driveway and an exterior charger can be enough. You decide
-              when charging is available, where the Driver parks and whether
-              you ever interact with them.
-            </p>
+              <h2 className="mt-4 text-5xl font-black leading-[0.98] tracking-[-0.04em] sm:text-6xl">
+                Share the charger.
+                <br />
+                <span className="text-emerald-400">
+                  Not the house.
+                </span>
+              </h2>
+
+              <p className="mt-6 text-xl leading-8 text-slate-300">
+                The strongest KIVO Host setup keeps the Driver outside your
+                living space. You decide exactly where the Driver parks and
+                what part of your property is accessible.
+              </p>
+
+
+              <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+
+                <p className="text-sm font-bold text-white">
+                  During Host setup, KIVO will ask you to show:
+                </p>
+
+                <div className="mt-4 space-y-3 text-sm text-slate-300">
+
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/10 font-bold text-emerald-300">
+                      1
+                    </span>
+                    A clear photo of your charger
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/10 font-bold text-emerald-300">
+                      2
+                    </span>
+                    The parking space the Driver should use
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/10 font-bold text-emerald-300">
+                      3
+                    </span>
+                    A wider arrival view showing access to the charger
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+
+            {/* RIGHT — REAL HOST ACCESS SCENARIOS */}
+            <div>
+
+              <p className="text-sm font-bold text-slate-300">
+                Which setup looks most like yours?
+              </p>
+
+
+              <div className="mt-5 grid gap-4">
+
+                {/* EXTERIOR — BEST FIT */}
+                <div className="grid gap-5 rounded-[26px] border border-emerald-400/25 bg-emerald-400/[0.07] p-5 sm:grid-cols-[150px_1fr] sm:items-center sm:p-6">
+
+                  <div className="flex min-h-[120px] items-center justify-center rounded-2xl border border-emerald-400/15 bg-[#06101f]">
+
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 160 110"
+                      fill="none"
+                      className="h-[100px] w-[145px]"
+                    >
+                      <path
+                        d="M18 50 67 18l49 32v43H18V50Z"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-slate-500"
+                      />
+
+                      <path
+                        d="M84 93V58h24v35"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-slate-500"
+                      />
+
+                      <rect
+                        x="121"
+                        y="43"
+                        width="18"
+                        height="30"
+                        rx="4"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-emerald-300"
+                      />
+
+                      <path
+                        d="M130 73v11c0 8 7 8 12 8h6"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        className="text-emerald-300"
+                      />
+
+                      <path
+                        d="M91 94h61"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        className="text-cyan-300"
+                      />
+                    </svg>
+
+                  </div>
+
+
+                  <div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-emerald-400 px-3 py-1 text-[11px] font-black uppercase tracking-[0.15em] text-slate-950">
+                        BEST FIT
+                      </span>
+
+                      <span className="text-xs font-semibold text-slate-400">
+                        Lowest-friction hosting
+                      </span>
+                    </div>
+
+                    <h3 className="mt-3 text-2xl font-black">
+                      Exterior charger + driveway
+                    </h3>
+
+                    <p className="mt-2 leading-7 text-slate-300">
+                      The Driver parks in the space you designate, plugs in
+                      outside and never needs access to your garage or home.
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                {/* GARAGE MOUNTED — GOOD FIT */}
+                <div className="grid gap-5 rounded-[26px] border border-cyan-400/20 bg-cyan-400/[0.05] p-5 sm:grid-cols-[150px_1fr] sm:items-center sm:p-6">
+
+                  <div className="flex min-h-[120px] items-center justify-center rounded-2xl border border-cyan-400/15 bg-[#06101f]">
+
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 160 110"
+                      fill="none"
+                      className="h-[100px] w-[145px]"
+                    >
+                      <path
+                        d="M17 51 67 18l50 33v42H17V51Z"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-slate-500"
+                      />
+
+                      <rect
+                        x="77"
+                        y="51"
+                        width="35"
+                        height="42"
+                        rx="2"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-slate-400"
+                      />
+
+                      <rect
+                        x="84"
+                        y="57"
+                        width="15"
+                        height="23"
+                        rx="3"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        className="text-cyan-300"
+                      />
+
+                      <path
+                        d="M99 70c18 1 19 23 32 23h21"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        className="text-emerald-300"
+                      />
+
+                      <path
+                        d="M116 94h37"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        className="text-cyan-300"
+                      />
+                    </svg>
+
+                  </div>
+
+
+                  <div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-cyan-300/30 bg-cyan-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.15em] text-cyan-300">
+                        GOOD FIT
+                      </span>
+
+                      <span className="text-xs font-semibold text-slate-400">
+                        Common garage installation
+                      </span>
+                    </div>
+
+                    <h3 className="mt-3 text-2xl font-black">
+                      Garage-mounted charger that reaches the driveway
+                    </h3>
+
+                    <p className="mt-2 leading-7 text-slate-300">
+                      This can work well when the charger cable reaches the
+                      designated exterior parking space without requiring the
+                      Driver to enter the garage.
+                    </p>
+
+                  </div>
+
+                </div>
+
+
+                {/* GARAGE ENTRY — HIGHER FRICTION */}
+                <div className="grid gap-5 rounded-[26px] border border-amber-400/18 bg-amber-400/[0.04] p-5 sm:grid-cols-[150px_1fr] sm:items-center sm:p-6">
+
+                  <div className="flex min-h-[120px] items-center justify-center rounded-2xl border border-amber-400/12 bg-[#06101f]">
+
+                    <svg
+                      aria-hidden="true"
+                      viewBox="0 0 160 110"
+                      fill="none"
+                      className="h-[100px] w-[145px]"
+                    >
+                      <path
+                        d="M18 51 67 18l50 33v42H18V51Z"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-slate-500"
+                      />
+
+                      <rect
+                        x="75"
+                        y="49"
+                        width="40"
+                        height="44"
+                        rx="2"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-amber-300"
+                      />
+
+                      <path
+                        d="M80 60h30M80 70h30M80 80h30"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        className="text-amber-300"
+                      />
+
+                      <circle
+                        cx="135"
+                        cy="73"
+                        r="13"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        className="text-slate-500"
+                      />
+
+                      <path
+                        d="M129 67l12 12M141 67l-12 12"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        className="text-amber-300"
+                      />
+                    </svg>
+
+                  </div>
+
+
+                  <div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full border border-amber-300/30 bg-amber-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.15em] text-amber-300">
+                        MORE CONSIDERATION
+                      </span>
+                    </div>
+
+                    <h3 className="mt-3 text-2xl font-black">
+                      Garage entry required
+                    </h3>
+
+                    <p className="mt-2 leading-7 text-slate-300">
+                      If charging requires the Driver or vehicle to enter your
+                      garage, the privacy and access tradeoff is much greater.
+                      This is not the default KIVO Host experience we are
+                      designing around.
+                    </p>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
 
           </div>
 
 
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {/* CONTROL STRIP */}
+          <div className="mt-12 grid overflow-hidden rounded-[24px] border border-white/10 bg-[#06101f] sm:grid-cols-2 xl:grid-cols-4">
 
-            {trustItems.map((item) => (
-              <div
-                key={item.title}
-                className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5"
-              >
+            <div className="p-5">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
+                SCHEDULE
+              </p>
+              <p className="mt-2 font-bold">
+                You decide when.
+              </p>
+            </div>
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-400/20 bg-emerald-400/10 text-emerald-300">
-                  ✓
-                </div>
+            <div className="border-t border-white/[0.07] p-5 sm:border-l sm:border-t-0">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
+                APPROVAL
+              </p>
+              <p className="mt-2 font-bold">
+                You decide who.
+              </p>
+            </div>
 
-                <h3 className="mt-5 text-xl font-bold">
-                  {item.title}
-                </h3>
+            <div className="border-t border-white/[0.07] p-5 xl:border-l xl:border-t-0">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
+                PARKING
+              </p>
+              <p className="mt-2 font-bold">
+                You decide where.
+              </p>
+            </div>
 
-                <p className="mt-3 text-sm leading-6 text-slate-400">
-                  {item.text}
-                </p>
-
-              </div>
-            ))}
+            <div className="border-t border-white/[0.07] p-5 sm:border-l xl:border-t-0">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
+                PRIVACY
+              </p>
+              <p className="mt-2 font-bold">
+                Address shared after acceptance.
+              </p>
+            </div>
 
           </div>
 
