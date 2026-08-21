@@ -4885,258 +4885,573 @@ export default function Home() {
             const detour = getHostDetour(selectedHost);
 
             return (
-              <div className="absolute bottom-3 left-3 right-3 z-10 max-h-[82%] overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950/95 p-4 shadow-2xl backdrop-blur sm:bottom-5 sm:left-5 sm:right-auto sm:w-[430px] sm:max-w-md sm:p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-400">
-                        {selectedHost.real
-                          ? "KIVO HOST"
-                          : selectedHost.simulated
-                          ? "SIMULATED KIVO HOST"
-                          : "SAMPLE KIVO HOST"}
-                      </p>
+              <div className="absolute bottom-3 left-3 right-3 z-10 flex max-h-[88%] flex-col overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_30px_100px_rgba(0,0,0,0.35)] backdrop-blur-xl sm:bottom-5 sm:left-auto sm:right-5 sm:top-5 sm:max-h-none sm:w-[520px] sm:max-w-[calc(100%-40px)]">
 
-                      {selectedHost.real &&
-                        selectedHost.reviews === 0 && (
-                          <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-300">
-                            New Host
+                {/* =================================================
+                    LISTING HEADER
+                ================================================== */}
+
+                <div className="border-b border-slate-200 p-5 sm:p-6">
+
+                  <div className="flex items-start justify-between gap-4">
+
+                    <div className="min-w-0">
+
+                      <div className="flex flex-wrap items-center gap-2">
+
+                        <span className={`rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                          selectedHost.real
+                            ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-700"
+                            : "border-slate-300 bg-slate-100 text-slate-700"
+                        }`}>
+                          {selectedHost.real
+                            ? "KIVO Host"
+                            : selectedHost.simulated
+                            ? "Simulated KIVO Host"
+                            : "Sample KIVO Host"}
+                        </span>
+
+                        {selectedHost.real &&
+                          selectedHost.reviews === 0 && (
+                            <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.15em] text-cyan-700">
+                              New Host
+                            </span>
+                          )}
+
+                      </div>
+
+
+                      <h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+                        {selectedHost.area}
+                        {selectedHost.state !== "KIVO Demo"
+                          ? `, ${selectedHost.state}`
+                          : ""}
+                      </h2>
+
+
+                      <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          className="h-4 w-4 text-cyan-400"
+                        >
+                          <circle cx="12" cy="8" r="3" />
+                          <path
+                            strokeLinecap="round"
+                            d="M5 20c.6-4.2 3-6 7-6s6.4 1.8 7 6"
+                          />
+                        </svg>
+
+                        <span>
+                          Hosted by{" "}
+                          <span className="font-semibold text-slate-900">
+                            {selectedHost.hostName}
                           </span>
-                        )}
-                    </div>
+                        </span>
 
-                    <h2 className="mt-1 text-2xl font-bold">
-                      {selectedHost.area}
-                      {selectedHost.state !== "KIVO Demo"
-                        ? `, ${selectedHost.state}`
-                        : ""}
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-400">
-                      Hosted by {selectedHost.hostName}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setSelectedHost(null);
-                      setRequestSent(false);
-                    }}
-                    className="rounded-full border border-slate-700 px-3 py-1 text-slate-400 hover:bg-slate-800 hover:text-white"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between border-y border-slate-800 py-4">
-                  <div>
-                    <p className="text-3xl font-bold">
-                      ${selectedHost.price}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {selectedHost.real
-                        ? "charging session"
-                        : "sample charging session"}
-                    </p>
-                  </div>
-
-                  <div className="text-right">
-                    {selectedHost.reviews > 0 ? (
-                      <>
-                        <p className="font-semibold">
-                          ★ {selectedHost.rating}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {selectedHost.reviews}{" "}
-                          {selectedHost.real ? "reviews" : "sample reviews"}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-semibold text-cyan-300">
-                          New Host
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          No reviews yet
-                        </p>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold ${
-                      selectedHost.coverage === "destination"
-                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
-                        : selectedHost.coverage === "detour"
-                        ? "border-cyan-500/30 bg-cyan-500/10 text-cyan-400"
-                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                    }`}
-                  >
-                    {selectedHost.coverage === "destination"
-                      ? "Destination / remote coverage"
-                      : selectedHost.coverage === "detour"
-                      ? "Small detour"
-                      : "Along your route"}
-                  </span>
-                </div>
-
-                <div className="mt-3 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
-                  <p className="text-xs font-semibold text-emerald-400">
-                    ROUTE DETOUR
-                  </p>
-                  <p className="mt-1 font-semibold">
-                    {detour.miles} miles · about {detour.minutes} min off route
-                  </p>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  <div className="rounded-xl bg-slate-900 p-3">
-                    <p className="text-xs text-slate-500">CHARGER</p>
-                    <p className="mt-1 font-semibold">
-                      {selectedHost.charger}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-slate-900 p-3">
-                    <p className="text-xs text-slate-500">SPEED</p>
-                    <p className="mt-1 font-semibold">
-                      {selectedHost.speed}
-                    </p>
-                  </div>
-
-                  <div className="col-span-2 rounded-xl bg-slate-900 p-3">
-                    <p className="text-xs text-slate-500">AVAILABLE</p>
-                    <p className="mt-1 font-semibold text-emerald-400">
-                      {selectedHost.availability}
-                    </p>
-                  </div>
-
-                  <div className="col-span-2 rounded-xl bg-slate-900 p-3">
-                    <p className="text-xs text-slate-500">ACCESS</p>
-                    <p className="mt-1 font-semibold">
-                      {selectedHost.access}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <p className="text-xs font-semibold text-slate-500">
-                    AMENITIES
-                  </p>
-
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {selectedHost.amenities.map((amenity) => (
-                      <span
-                        key={amenity}
-                        className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs"
-                      >
-                        {amenity}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {!requestSent ? (
-                  <>
-                    <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">
-                          ARRIVAL TIME
-                        </label>
-                        <select
-                          value={selectedTime}
-                          onChange={(e) => setSelectedTime(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm outline-none focus:border-emerald-400"
-                        >
-                          <option>4:00 PM</option>
-                          <option>5:00 PM</option>
-                          <option>6:00 PM</option>
-                          <option>7:00 PM</option>
-                          <option>8:00 PM</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-semibold text-slate-500">
-                          VEHICLE CONNECTOR
-                        </label>
-                        <select
-                          value={vehicleConnector}
-                          onChange={(e) => setVehicleConnector(e.target.value)}
-                          className="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-3 text-sm outline-none focus:border-emerald-400"
-                        >
-                          <option>NACS / Tesla</option>
-                          <option>J1772</option>
-                          <option>Adapter available</option>
-                        </select>
                       </div>
                     </div>
 
-                    {bookingRequestError && (
-                      <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                        {bookingRequestError}
-                      </div>
-                    )}
 
                     <button
-                      onClick={requestChargingSession}
-                      disabled={bookingRequestLoading}
-                      className="mt-5 w-full rounded-xl bg-emerald-400 px-4 py-3 font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      type="button"
+                      aria-label="Close Host details"
+                      onClick={() => {
+                        setSelectedHost(null);
+                        setRequestSent(false);
+                      }}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-700 text-lg text-slate-600 transition hover:border-slate-500 hover:bg-slate-800 hover:text-slate-950"
                     >
-                      {bookingRequestLoading
-                        ? "Sending request..."
-                        : `Request session for ${selectedTime}`}
+                      ×
                     </button>
-                  </>
-                ) : (
-                  <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                    <p className="font-semibold text-emerald-400">
-                      Charging request sent ✓
-                    </p>
 
-                    {selectedHost.real ? (
-                      <>
-                        <p className="mt-2 text-sm leading-6 text-slate-300">
-                          Your request for {selectedTime} has been sent to this
-                          KIVO Host. Connector: {vehicleConnector}.
-                        </p>
+                  </div>
 
-                        <div className="mt-3 rounded-lg border border-emerald-400/20 bg-slate-950/40 px-3 py-2">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500">
-                            STATUS
+
+                  {/* PRICE / RATING */}
+
+                  <div className="mt-5 flex items-end justify-between gap-5">
+
+                    <div>
+                      <p className="text-3xl font-bold text-slate-950">
+                        ${selectedHost.price}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        {selectedHost.real
+                          ? "per charging session"
+                          : "sample charging session"}
+                      </p>
+                    </div>
+
+
+                    <div className="text-right">
+
+                      {selectedHost.reviews > 0 ? (
+                        <>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <span className="text-amber-700">
+                              ★
+                            </span>
+
+                            <span className="font-bold text-slate-950">
+                              {selectedHost.rating}
+                            </span>
+                          </div>
+
+                          <p className="mt-1 text-xs text-slate-500">
+                            {selectedHost.reviews}{" "}
+                            {selectedHost.real
+                              ? "reviews"
+                              : "sample reviews"}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-semibold text-cyan-700">
+                            New Host
                           </p>
 
-                          <p className="mt-1 font-semibold text-amber-300">
-                            Pending host approval
+                          <p className="mt-1 text-xs text-slate-500">
+                            No reviews yet
+                          </p>
+                        </>
+                      )}
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+
+                <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
+
+                  {/* =================================================
+                      ROUTE MATCH
+                  ================================================== */}
+
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+
+                    <div className="flex items-start gap-3">
+
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-400/25 bg-emerald-400/10 text-emerald-700">
+
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          className="h-5 w-5"
+                        >
+                          <circle cx="5" cy="18" r="2" />
+                          <circle cx="19" cy="6" r="2" />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M7 18h3c5 0 2-12 7-12"
+                          />
+                        </svg>
+
+                      </div>
+
+
+                      <div className="min-w-0">
+
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">
+                          {selectedHost.coverage === "destination"
+                            ? "Destination / remote coverage"
+                            : selectedHost.coverage === "detour"
+                            ? "Small detour"
+                            : "Along your route"}
+                        </p>
+
+                        <p className="mt-1 font-semibold text-slate-950">
+                          {detour.miles} miles · about{" "}
+                          {detour.minutes} min off route
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* =================================================
+                      CHARGING DETAILS
+                  ================================================== */}
+
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-2 text-slate-500">
+
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          className="h-4 w-4 text-cyan-400"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M8 3h7v10a4 4 0 0 1-8 0V4a1 1 0 0 1 1-1Z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            d="M15 7h3v5M18 12h2v6"
+                          />
+                        </svg>
+
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em]">
+                          Charger
+                        </p>
+                      </div>
+
+                      <p className="mt-2 text-sm font-semibold text-slate-950">
+                        {selectedHost.charger}
+                      </p>
+                    </div>
+
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-2 text-slate-500">
+
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          className="h-4 w-4 text-emerald-400"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="m13 2-7 12h6l-1 8 7-12h-6l1-8Z"
+                          />
+                        </svg>
+
+                        <p className="text-[10px] font-bold uppercase tracking-[0.14em]">
+                          Speed
+                        </p>
+                      </div>
+
+                      <p className="mt-2 text-sm font-semibold text-emerald-700">
+                        {selectedHost.speed}
+                      </p>
+                    </div>
+
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                        Availability
+                      </p>
+
+                      <p className="mt-2 text-sm font-semibold text-emerald-700">
+                        {selectedHost.availability}
+                      </p>
+                    </div>
+
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                        Access
+                      </p>
+
+                      <p className="mt-2 text-sm font-semibold text-slate-950">
+                        {selectedHost.access}
+                      </p>
+                    </div>
+
+                  </div>
+
+
+                  {/* =================================================
+                      AMENITIES
+                  ================================================== */}
+
+                  <div className="mt-5">
+
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                      Amenities
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
+
+                      {selectedHost.amenities.map((amenity) => (
+                        <span
+                          key={amenity}
+                          className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-slate-700"
+                        >
+                          {amenity}
+                        </span>
+                      ))}
+
+                    </div>
+
+                  </div>
+
+
+                  {/* =================================================
+                      TRUST / PRIVACY
+                  ================================================== */}
+
+                  <div className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+
+                    <div className="flex items-start gap-3">
+
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-700">
+
+                        <svg
+                          aria-hidden="true"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          className="h-5 w-5"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M12 3 5 6v5c0 4.6 2.8 8 7 10 4.2-2 7-5.4 7-10V6l-7-3Z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="m9 12 2 2 4-4"
+                          />
+                        </svg>
+
+                      </div>
+
+
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          Host-controlled access
+                        </p>
+
+                        <p className="mt-1 text-xs leading-5 text-slate-600">
+                          The Host chooses whether to accept each request.
+                          Private charging address and arrival instructions are
+                          shared only after a charging session is accepted.
+                        </p>
+                      </div>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* =================================================
+                      BOOKING
+                  ================================================== */}
+
+                  {!requestSent ? (
+                    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-400">
+                          Request this charger
+                        </p>
+
+                        <p className="mt-1 text-sm leading-6 text-slate-600">
+                          Choose when you expect to arrive and confirm your
+                          vehicle connector.
+                        </p>
+                      </div>
+
+
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+
+                        <div>
+                          <label className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            Arrival time
+                          </label>
+
+                          <select
+                            value={selectedTime}
+                            onChange={(e) =>
+                              setSelectedTime(e.target.value)
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400"
+                          >
+                            <option>4:00 PM</option>
+                            <option>5:00 PM</option>
+                            <option>6:00 PM</option>
+                            <option>7:00 PM</option>
+                            <option>8:00 PM</option>
+                          </select>
+                        </div>
+
+
+                        <div>
+                          <label className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
+                            Vehicle connector
+                          </label>
+
+                          <select
+                            value={vehicleConnector}
+                            onChange={(e) =>
+                              setVehicleConnector(e.target.value)
+                            }
+                            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-950 outline-none transition focus:border-emerald-400"
+                          >
+                            <option>NACS / Tesla</option>
+                            <option>J1772</option>
+                            <option>Adapter available</option>
+                          </select>
+                        </div>
+
+                      </div>
+
+
+                      {bookingRequestError && (
+                        <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                          {bookingRequestError}
+                        </div>
+                      )}
+
+
+
+                    </div>
+                  ) : (
+                    <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+
+                      <div className="flex items-center gap-3">
+
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-400 text-lg font-bold text-slate-950">
+                          ✓
+                        </div>
+
+                        <div>
+                          <p className="font-semibold text-emerald-700">
+                            Charging request sent
+                          </p>
+
+                          <p className="mt-0.5 text-xs text-slate-500">
+                            {selectedHost.real
+                              ? "Waiting for Host approval"
+                              : "Validation demonstration"}
                           </p>
                         </div>
 
-                        {bookingRequestId && (
-                          <p className="mt-3 text-xs text-slate-500">
-                            Request ID:{" "}
-                            <span className="font-mono text-slate-400">
-                              {bookingRequestId}
-                            </span>
+                      </div>
+
+
+                      {selectedHost.real ? (
+                        <>
+                          <p className="mt-4 text-sm leading-6 text-slate-700">
+                            Your request for {selectedTime} has been sent to
+                            this KIVO Host. Connector: {vehicleConnector}.
                           </p>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p className="mt-2 text-sm leading-6 text-slate-300">
-                          {selectedHost.hostName} would now receive your request for{" "}
-                          {selectedTime}. Connector: {vehicleConnector}.
+
+                          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">
+                              Status
+                            </p>
+
+                            <p className="mt-1 font-semibold text-amber-700">
+                              Pending Host approval
+                            </p>
+                          </div>
+
+                          {bookingRequestId && (
+                            <p className="mt-4 text-xs text-slate-500">
+                              Request ID:{" "}
+                              <span className="font-mono text-slate-600">
+                                {bookingRequestId}
+                              </span>
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p className="mt-4 text-sm leading-6 text-slate-700">
+                            {selectedHost.hostName} would now receive your
+                            request for {selectedTime}. Connector:{" "}
+                            {vehicleConnector}.
+                          </p>
+
+                          <p className="mt-3 text-xs leading-5 text-slate-500">
+                            Validation demo — no real booking was created for
+                            this sample Host.
+                          </p>
+                        </>
+                      )}
+
+                    </div>
+                  )}
+
+                </div>
+
+
+                {/* =================================================
+                    PERSISTENT BOOKING ACTION
+                ================================================== */}
+
+                {!requestSent && (
+                  <div className="shrink-0 border-t border-slate-200 bg-white p-4 shadow-[0_-10px_30px_rgba(0,0,0,0.10)] sm:px-6 sm:py-4">
+
+                    <div className="flex items-center gap-4">
+
+                      <div className="hidden min-w-0 sm:block">
+                        <p className="text-lg font-bold text-slate-950">
+                          ${selectedHost.price}
+                          <span className="ml-1 text-xs font-normal text-slate-500">
+                            per session
+                          </span>
                         </p>
 
-                        <p className="mt-2 text-xs text-slate-500">
-                          Validation demo — no real booking was created for this
-                          sample host.
+                        <p className="truncate text-xs text-slate-500">
+                          {selectedTime} · {vehicleConnector}
                         </p>
-                      </>
-                    )}
+                      </div>
+
+
+                      <button
+                        type="button"
+                        onClick={requestChargingSession}
+                        disabled={bookingRequestLoading}
+                        className="inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-400 px-5 py-3.5 font-bold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {bookingRequestLoading ? (
+                          "Sending request..."
+                        ) : (
+                          <>
+                            Request session for {selectedTime}
+
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              className="h-4 w-4 shrink-0"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M5 12h14M13 6l6 6-6 6"
+                              />
+                            </svg>
+                          </>
+                        )}
+                      </button>
+
+                    </div>
+
                   </div>
                 )}
+
               </div>
             );
           })()}
