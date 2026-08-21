@@ -30,18 +30,27 @@ const trustItems = [
 const steps = [
   {
     number: "1",
-    title: "Set availability",
+    icon: "📅",
+    title: "Set your availability",
     text: "Choose the days, times and hosting style that work for you.",
   },
   {
     number: "2",
-    title: "Approve & share",
-    text: "Review requests and share arrival instructions only after you accept.",
+    icon: "✅",
+    title: "Review & approve",
+    text: "See the request first. Arrival details are shared only after you accept.",
   },
   {
     number: "3",
-    title: "Driver charges, you earn",
-    text: "A driver uses the charger and you unlock value from unused charging capacity.",
+    icon: "⚡",
+    title: "They charge. You earn.",
+    text: "The Driver uses the space you designated while your charger creates value from otherwise unused capacity.",
+  },
+  {
+    number: "4",
+    icon: "🤝",
+    title: "Connect with your EV community",
+    text: "Hosting can stay completely contactless. But if you choose to interact, a charging stop can become a local connection — maybe even a new EV friend.",
   },
 ];
 
@@ -182,7 +191,7 @@ export default function HostPage() {
                 <span className="flex h-7 w-7 items-center justify-center rounded-full border border-emerald-300/70 text-sm text-emerald-300">
                   ✓
                 </span>
-                No home access
+                You control property access
               </span>
 
               <span className="inline-flex items-center gap-2.5">
@@ -270,7 +279,7 @@ export default function HostPage() {
         id="earnings"
         className="bg-[#f8fafc] text-slate-950"
       >
-        <div className="mx-auto grid max-w-[1500px] gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-center lg:px-10 lg:py-24">
+        <div className="mx-auto grid max-w-[1500px] gap-10 px-5 py-10 sm:px-8 lg:grid-cols-[0.82fr_1.18fr] lg:items-start lg:px-10 lg:py-12">
 
           <div className="max-w-[580px]">
 
@@ -278,17 +287,17 @@ export default function HostPage() {
               YOUR CHARGER. YOUR EARNINGS.
             </p>
 
-            <h2 className="mt-4 text-5xl font-black leading-[0.98] tracking-[-0.045em] sm:text-6xl">
+            <h2 className="mt-3 text-[46px] font-black leading-[0.98] tracking-[-0.045em] sm:text-[54px]">
               What could your charger earn?
             </h2>
 
-            <p className="mt-6 text-xl leading-8 text-slate-600">
+            <p className="mt-4 text-xl leading-8 text-slate-600">
               Hosting has to be worth it. Start with your charger,
               electricity cost and the number of sessions you would
               realistically consider each month.
             </p>
 
-            <div className="mt-8 space-y-5">
+            <div className="mt-6 space-y-4">
 
               <div className="flex items-start gap-4">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 font-black text-emerald-700">
@@ -296,11 +305,11 @@ export default function HostPage() {
                 </span>
 
                 <div>
-                  <p className="font-bold text-slate-950">
+                  <p className="text-lg font-bold text-slate-950">
                     Cover the electricity.
                   </p>
 
-                  <p className="mt-1 leading-6 text-slate-600">
+                  <p className="mt-1 text-lg leading-7 text-slate-600">
                     Charging should not leave the Host paying the
                     Driver's energy bill.
                   </p>
@@ -314,11 +323,11 @@ export default function HostPage() {
                 </span>
 
                 <div>
-                  <p className="font-bold text-slate-950">
+                  <p className="text-lg font-bold text-slate-950">
                     Earn for providing access.
                   </p>
 
-                  <p className="mt-1 leading-6 text-slate-600">
+                  <p className="mt-1 text-lg leading-7 text-slate-600">
                     The value is not just electricity. You are making
                     your charger and parking space available.
                   </p>
@@ -332,11 +341,11 @@ export default function HostPage() {
                 </span>
 
                 <div>
-                  <p className="font-bold text-slate-950">
+                  <p className="text-lg font-bold text-slate-950">
                     You decide if it is worth it.
                   </p>
 
-                  <p className="mt-1 leading-6 text-slate-600">
+                  <p className="mt-1 text-lg leading-7 text-slate-600">
                     KIVO will show the expected payout before you
                     choose whether to accept a booking.
                   </p>
@@ -374,24 +383,26 @@ export default function HostPage() {
                 Share the charger.
                 <br />
                 <span className="text-emerald-400">
-                  Not the house.
+                  You set the boundaries.
                 </span>
               </h2>
 
-              <p className="mt-6 text-xl leading-8 text-slate-300">
-                The strongest KIVO Host setup keeps the Driver outside your
-                living space. You decide exactly where the Driver parks and
-                what part of your property is accessible.
+              <p className="mt-6 text-[21px] leading-9 text-slate-300">
+                Your setup can be as simple as driveway-only charging. If you
+                choose to offer additional access or amenities, those
+                boundaries remain yours to define. You decide where the
+                Driver parks, what they may access and whether you interact
+                at all.
               </p>
 
 
               <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
 
-                <p className="text-sm font-bold text-white">
+                <p className="text-[17px] font-bold text-white">
                   During Host setup, KIVO will ask you to show:
                 </p>
 
-                <div className="mt-4 space-y-3 text-sm text-slate-300">
+                <div className="mt-4 space-y-3 text-lg leading-7 text-slate-300">
 
                   <div className="flex items-center gap-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/10 font-bold text-emerald-300">
@@ -424,7 +435,7 @@ export default function HostPage() {
             {/* RIGHT — REAL HOST ACCESS SCENARIOS */}
             <div>
 
-              <p className="text-sm font-bold text-slate-300">
+              <p className="text-[17px] font-bold text-slate-200">
                 Which setup looks most like yours?
               </p>
 
@@ -499,11 +510,11 @@ export default function HostPage() {
                       </span>
                     </div>
 
-                    <h3 className="mt-3 text-2xl font-black">
+                    <h3 className="mt-3 text-[26px] font-black leading-tight">
                       Exterior charger + driveway
                     </h3>
 
-                    <p className="mt-2 leading-7 text-slate-300">
+                    <p className="mt-2 text-lg leading-7 text-slate-300">
                       The Driver parks in the space you designate, plugs in
                       outside and never needs access to your garage or home.
                     </p>
@@ -585,11 +596,11 @@ export default function HostPage() {
                       </span>
                     </div>
 
-                    <h3 className="mt-3 text-2xl font-black">
+                    <h3 className="mt-3 text-[26px] font-black leading-tight">
                       Garage-mounted charger that reaches the driveway
                     </h3>
 
-                    <p className="mt-2 leading-7 text-slate-300">
+                    <p className="mt-2 text-lg leading-7 text-slate-300">
                       This can work well when the charger cable reaches the
                       designated exterior parking space without requiring the
                       Driver to enter the garage.
@@ -665,11 +676,11 @@ export default function HostPage() {
                       </span>
                     </div>
 
-                    <h3 className="mt-3 text-2xl font-black">
+                    <h3 className="mt-3 text-[26px] font-black leading-tight">
                       Garage entry required
                     </h3>
 
-                    <p className="mt-2 leading-7 text-slate-300">
+                    <p className="mt-2 text-lg leading-7 text-slate-300">
                       If charging requires the Driver or vehicle to enter your
                       garage, the privacy and access tradeoff is much greater.
                       This is not the default KIVO Host experience we are
@@ -690,38 +701,42 @@ export default function HostPage() {
           {/* CONTROL STRIP */}
           <div className="mt-12 grid overflow-hidden rounded-[24px] border border-white/10 bg-[#06101f] sm:grid-cols-2 xl:grid-cols-4">
 
-            <div className="p-5">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
-                SCHEDULE
-              </p>
-              <p className="mt-2 font-bold">
+            <div className="p-6">
+              <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-emerald-400">
+                <span aria-hidden="true" className="text-xl">🕒</span>
+                <span>Schedule</span>
+              </div>
+              <p className="mt-3 text-lg font-bold text-white">
                 You decide when.
               </p>
             </div>
 
-            <div className="border-t border-white/[0.07] p-5 sm:border-l sm:border-t-0">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
-                APPROVAL
-              </p>
-              <p className="mt-2 font-bold">
+            <div className="border-t border-white/[0.07] p-6 sm:border-l sm:border-t-0">
+              <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-emerald-400">
+                <span aria-hidden="true" className="text-xl">✅</span>
+                <span>Approval</span>
+              </div>
+              <p className="mt-3 text-lg font-bold text-white">
                 You decide who.
               </p>
             </div>
 
-            <div className="border-t border-white/[0.07] p-5 xl:border-l xl:border-t-0">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
-                PARKING
-              </p>
-              <p className="mt-2 font-bold">
+            <div className="border-t border-white/[0.07] p-6 xl:border-l xl:border-t-0">
+              <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-emerald-400">
+                <span aria-hidden="true" className="text-xl">🚗</span>
+                <span>Parking</span>
+              </div>
+              <p className="mt-3 text-lg font-bold text-white">
                 You decide where.
               </p>
             </div>
 
-            <div className="border-t border-white/[0.07] p-5 sm:border-l xl:border-t-0">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-400">
-                PRIVACY
-              </p>
-              <p className="mt-2 font-bold">
+            <div className="border-t border-white/[0.07] p-6 sm:border-l xl:border-t-0">
+              <div className="flex items-center gap-2 text-sm font-black uppercase tracking-[0.12em] text-emerald-400">
+                <span aria-hidden="true" className="text-xl">🔒</span>
+                <span>Privacy</span>
+              </div>
+              <p className="mt-3 text-lg font-bold text-white">
                 Address shared after acceptance.
               </p>
             </div>
@@ -741,34 +756,40 @@ export default function HostPage() {
 
           <div className="max-w-3xl">
 
-            <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-700">
+            <p className="text-sm font-bold uppercase tracking-[0.22em] text-emerald-700">
               HOW KIVO HOSTING WORKS
             </p>
 
             <h2 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-              Three steps. You stay in control.
+              Four simple steps. You stay in control.
             </h2>
 
           </div>
 
 
-          <div className="mt-10 grid gap-5 lg:grid-cols-3">
+          <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
 
             {steps.map((step) => (
               <div
                 key={step.number}
-                className="rounded-[26px] border border-slate-200 bg-slate-50 p-6 sm:p-7"
+                className="rounded-[26px] border border-slate-200 bg-slate-50 p-6"
               >
 
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-lg font-black text-emerald-700">
-                  {step.number}
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100 text-2xl">
+                    <span aria-hidden="true">{step.icon}</span>
+                  </div>
+
+                  <span className="text-sm font-black uppercase tracking-[0.14em] text-emerald-700">
+                    Step {step.number}
+                  </span>
                 </div>
 
-                <h3 className="mt-5 text-2xl font-black tracking-tight">
+                <h3 className="mt-5 text-[25px] font-black leading-tight tracking-tight">
                   {step.title}
                 </h3>
 
-                <p className="mt-3 text-base leading-7 text-slate-600">
+                <p className="mt-3 text-lg leading-7 text-slate-600">
                   {step.text}
                 </p>
 
@@ -792,54 +813,58 @@ export default function HostPage() {
           <div className="rounded-[32px] border border-white/10 bg-gradient-to-r from-[#06101f] via-[#071527] to-[#0a1a22] p-7 shadow-2xl sm:p-8 lg:p-10">
             <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-400">
+                <p className="text-sm font-bold uppercase tracking-[0.20em] text-emerald-400">
                   BE A FOUNDING HOST
                 </p>
 
                 <h2 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-                  Help shape the future of neighborhood charging.
+                  Founding Hosts get more than early access.
                 </h2>
 
-                <p className="mt-5 max-w-xl text-lg leading-8 text-slate-300">
-                  Early Hosts will help define how KIVO launches and how the Host
-                  experience evolves as we build the network.
+                <p className="mt-5 max-w-xl text-xl leading-8 text-slate-300">
+                  Help shape how KIVO grows while receiving the advantages we are
+                  designing for the Hosts who join the network first.
                 </p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                  <p className="text-sm font-bold text-emerald-300">
-                    0% Host fee
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-2xl" aria-hidden="true">💰</div>
+                  <p className="mt-3 text-xl font-bold text-emerald-300">
+                    0% Host fee at launch
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    During launch period
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                  <p className="text-sm font-bold text-emerald-300">
-                    Preferred earnings
-                  </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    Better economics than later Hosts
+                  <p className="mt-2 text-lg leading-7 text-slate-300">
+                    Our planned launch structure lets early Hosts keep more of what they earn.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                  <p className="text-sm font-bold text-emerald-300">
-                    Priority placement
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-2xl" aria-hidden="true">⚡</div>
+                  <p className="mt-3 text-xl font-bold text-emerald-300">
+                    Founding Host economics
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    Early visibility as markets activate
+                  <p className="mt-2 text-lg leading-7 text-slate-300">
+                    Early Hosts help shape the preferred launch economics as the network grows.
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
-                  <p className="text-sm font-bold text-emerald-300">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-2xl" aria-hidden="true">📍</div>
+                  <p className="mt-3 text-xl font-bold text-emerald-300">
+                    Priority in launch markets
+                  </p>
+                  <p className="mt-2 text-lg leading-7 text-slate-300">
+                    Founding Hosts receive early visibility as KIVO activates local markets.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-2xl" aria-hidden="true">🏡</div>
+                  <p className="mt-3 text-xl font-bold text-emerald-300">
                     Founding Host status
                   </p>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">
-                    Recognized as part of the first KIVO network
+                  <p className="mt-2 text-lg leading-7 text-slate-300">
+                    Be recognized as one of the Hosts who helped build the neighborhood charging network.
                   </p>
                 </div>
               </div>
@@ -871,7 +896,7 @@ export default function HostPage() {
         <div className="mx-auto max-w-[1500px] px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
           <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-400">
+              <p className="text-sm font-bold uppercase tracking-[0.20em] text-emerald-400">
                 FOUNDING HOST APPLICATION
               </p>
 
@@ -879,7 +904,7 @@ export default function HostPage() {
                 Could your charger become part of KIVO?
               </h2>
 
-              <p className="mt-5 max-w-xl text-lg leading-8 text-slate-400">
+              <p className="mt-5 max-w-xl text-xl leading-8 text-slate-300">
                 Next we will wire this into a real KIVO Host-interest application.
                 The goal is to capture qualified charger owners without creating
                 a live public listing yet.
@@ -887,7 +912,7 @@ export default function HostPage() {
             </div>
 
             <div className="rounded-[28px] border border-white/10 bg-[#06101f] p-6 sm:p-8">
-              <p className="text-sm font-semibold text-white">
+              <p className="text-lg font-bold text-white">
                 First qualification fields
               </p>
 
@@ -904,14 +929,14 @@ export default function HostPage() {
                 ].map((field) => (
                   <div
                     key={field}
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3 text-sm text-slate-300"
+                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-5 py-4 text-lg font-medium leading-7 text-slate-200"
                   >
                     {field}
                   </div>
                 ))}
               </div>
 
-              <p className="mt-5 text-xs leading-5 text-slate-500">
+              <p className="mt-5 text-sm leading-6 text-slate-400">
                 No live charger listing is created from this page yet. This step
                 is for Host-interest validation and Founding Host recruitment.
               </p>
