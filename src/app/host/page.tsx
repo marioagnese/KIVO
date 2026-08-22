@@ -101,8 +101,8 @@ export default function HostPage() {
             </Link>
 
 
-            <a
-              href="#founding-host"
+            <Link
+              href="/host/apply"
               className="group inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] px-4 text-sm font-semibold text-white backdrop-blur-md transition hover:border-emerald-300/70 hover:bg-emerald-400/15 sm:h-auto sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
             >
               <svg
@@ -136,7 +136,7 @@ export default function HostPage() {
               <span className="sm:hidden">
                 Join
               </span>
-            </a>
+            </Link>
 
           </nav>
 
@@ -213,8 +213,8 @@ export default function HostPage() {
 
             <div className="mt-9 flex flex-wrap gap-4">
 
-              <a
-                href="#founding-host"
+              <Link
+                href="/host/apply"
                 className="inline-flex min-h-[60px] items-center justify-center gap-3 rounded-xl bg-emerald-400 px-8 py-4 text-lg font-black text-slate-950 shadow-[0_12px_35px_rgba(52,211,153,0.28)] transition hover:bg-emerald-300"
               >
                 <span className="relative flex h-3 w-3">
@@ -238,7 +238,7 @@ export default function HostPage() {
                     d="M5 12h14M13 6l6 6-6 6"
                   />
                 </svg>
-              </a>
+              </Link>
 
 
               <a
@@ -871,12 +871,12 @@ export default function HostPage() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#host-application"
+              <Link
+                href="/host/apply"
                 className="rounded-xl bg-emerald-400 px-6 py-3.5 font-bold text-slate-950 transition hover:bg-emerald-300"
               >
                 Become a Founding Host
-              </a>
+              </Link>
 
               <Link
                 href="/"
@@ -890,60 +890,85 @@ export default function HostPage() {
       </section>
 
       {/* =====================================================
-          APPLICATION PLACEHOLDER
+          FINAL HOST CTA
       ====================================================== */}
-      <section id="host-application" className="border-t border-white/[0.07] bg-slate-950">
+      <section className="border-t border-white/[0.07] bg-slate-950">
         <div className="mx-auto max-w-[1500px] px-5 py-16 sm:px-8 lg:px-10 lg:py-20">
-          <div className="grid gap-10 lg:grid-cols-[0.95fr_1.05fr]">
-            <div>
-              <p className="text-sm font-bold uppercase tracking-[0.20em] text-emerald-400">
-                FOUNDING HOST APPLICATION
-              </p>
 
-              <h2 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">
-                Could your charger become part of KIVO?
-              </h2>
+          <div className="overflow-hidden rounded-[32px] border border-white/10 bg-[#06101f] shadow-2xl">
 
-              <p className="mt-5 max-w-xl text-xl leading-8 text-slate-300">
-                Next we will wire this into a real KIVO Host-interest application.
-                The goal is to capture qualified charger owners without creating
-                a live public listing yet.
-              </p>
-            </div>
+            <div className="grid lg:grid-cols-[0.88fr_1.12fr]">
 
-            <div className="rounded-[28px] border border-white/10 bg-[#06101f] p-6 sm:p-8">
-              <p className="text-lg font-bold text-white">
-                First qualification fields
-              </p>
+              <div className="flex flex-col justify-center px-7 py-12 sm:px-10 lg:px-12 lg:py-14">
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {[
-                  "ZIP / Postal Code",
-                  "Email address",
-                  "Charger connector",
-                  "Parking setup",
-                  "Exterior accessibility",
-                  "Potential availability",
-                  "Desired earnings",
-                  "Hosting preferences",
-                ].map((field) => (
-                  <div
-                    key={field}
-                    className="rounded-xl border border-white/[0.08] bg-white/[0.04] px-5 py-4 text-lg font-medium leading-7 text-slate-200"
-                  >
-                    {field}
-                  </div>
-                ))}
+                <p className="text-sm font-black uppercase tracking-[0.20em] text-emerald-400">
+                  KIVO FOUNDING HOSTS
+                </p>
+
+                <h2 className="mt-4 text-4xl font-black tracking-tight text-white sm:text-5xl">
+                  Your charger is already there.
+                  <br />
+                  Put it to work.
+                </h2>
+
+                <p className="mt-6 max-w-xl text-xl leading-8 text-slate-300">
+                  Join the first KIVO Hosts helping create a more personal,
+                  convenient way to charge.
+                </p>
+
+                <div className="mt-7 space-y-3 text-lg leading-7 text-slate-300">
+
+                  <p>
+                    <span className="mr-3 text-emerald-400">✓</span>
+                    Joining takes about a minute.
+                  </p>
+
+                  <p>
+                    <span className="mr-3 text-emerald-400">✓</span>
+                    No public listing is created yet.
+                  </p>
+
+                  <p>
+                    <span className="mr-3 text-emerald-400">✓</span>
+                    Full Host setup comes later.
+                  </p>
+
+                </div>
+
+                <Link
+                  href="/host/apply"
+                  className="mt-8 inline-flex min-h-[60px] w-fit items-center justify-center gap-3 rounded-xl bg-emerald-400 px-8 py-4 text-lg font-black text-slate-950 transition hover:bg-emerald-300"
+                >
+                  Become a Founding Host
+                  <span aria-hidden="true">→</span>
+                </Link>
+
               </div>
 
-              <p className="mt-5 text-sm leading-6 text-slate-400">
-                No live charger listing is created from this page yet. This step
-                is for Host-interest validation and Founding Host recruitment.
-              </p>
+
+              <div className="relative min-h-[360px] lg:min-h-[520px]">
+
+                <img
+                  src="/kivo/kivo-host-welcome-day.png"
+                  alt="A KIVO Host welcoming an EV driver arriving at a home charger"
+                  className="absolute inset-0 h-full w-full object-cover object-[90%_center]"
+                />
+
+                <div className="absolute inset-0 bg-gradient-to-r from-[#06101f]/25 via-transparent to-transparent" />
+
+                <div className="absolute bottom-5 left-5 rounded-full border border-white/20 bg-[#020817]/70 px-4 py-2 text-sm font-bold text-white backdrop-blur-md">
+                  Your Neighborhood Charger
+                </div>
+
+              </div>
+
             </div>
+
           </div>
+
         </div>
       </section>
+
     </main>
   );
 }
