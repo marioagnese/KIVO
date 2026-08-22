@@ -3156,12 +3156,9 @@ export default function Home() {
 
               <button
                 type="button"
-                onClick={() =>
-                  openAccountModal(
-                    "host",
-                    "signup"
-                  )
-                }
+                onClick={() => {
+                  window.location.href = "/host";
+                }}
                 className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] p-0 text-sm font-semibold text-white backdrop-blur-md transition hover:border-emerald-300/70 hover:bg-emerald-400/15 sm:h-auto sm:w-auto sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
               >
                 <svg
@@ -4233,7 +4230,7 @@ export default function Home() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <label className="block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                    <label className="block text-[13px] font-bold uppercase tracking-[0.16em] text-slate-500">
                       From
                     </label>
 
@@ -4261,7 +4258,7 @@ export default function Home() {
                           setFromRegion(e.target.value)
                         }
                         aria-label="Origin state or province"
-                        className="w-[72px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-bold text-slate-700 outline-none transition focus:border-cyan-400"
+                        className="w-[72px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-base font-bold text-slate-700 outline-none transition focus:border-cyan-400"
                       >
                         <option value="">State</option>
 
@@ -4311,7 +4308,7 @@ export default function Home() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <label className="block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                    <label className="block text-[13px] font-bold uppercase tracking-[0.16em] text-slate-500">
                       To
                     </label>
 
@@ -4339,7 +4336,7 @@ export default function Home() {
                           setToRegion(e.target.value)
                         }
                         aria-label="Destination state or province"
-                        className="w-[72px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-sm font-bold text-slate-700 outline-none transition focus:border-emerald-400"
+                        className="w-[72px] shrink-0 cursor-pointer rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 text-base font-bold text-slate-700 outline-none transition focus:border-emerald-400"
                       >
                         <option value="">State</option>
 
@@ -4417,10 +4414,10 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <p className="font-bold text-white">
+                  <p className="text-[17px] font-bold text-white">
                     Private &amp; local
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                  <p className="mt-1 text-base leading-6 text-slate-300">
                     Your space. Your time.
                   </p>
                 </div>
@@ -4436,10 +4433,10 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <p className="font-bold text-white">
+                  <p className="text-[17px] font-bold text-white">
                     Host-controlled access
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                  <p className="mt-1 text-base leading-6 text-slate-300">
                     Hosts control availability and access.
                   </p>
                 </div>
@@ -4456,10 +4453,10 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <p className="font-bold text-white">
+                  <p className="text-[17px] font-bold text-white">
                     Real profiles
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                  <p className="mt-1 text-base leading-6 text-slate-300">
                     Real hosts. Marketplace history.
                   </p>
                 </div>
@@ -4476,10 +4473,10 @@ export default function Home() {
                 </div>
 
                 <div>
-                  <p className="font-bold text-white">
+                  <p className="text-[17px] font-bold text-white">
                     On your route
                   </p>
-                  <p className="mt-1 text-sm leading-5 text-slate-300">
+                  <p className="mt-1 text-base leading-6 text-slate-300">
                     Convenient stops where you need them.
                   </p>
                 </div>
@@ -4509,11 +4506,11 @@ export default function Home() {
               </div>
 
               <div>
-                <p className="font-bold text-white">
+                <p className="text-[17px] font-bold text-white">
                   Built with safety and trust at the core.
                 </p>
 
-                <p className="mt-0.5 text-sm leading-5 text-slate-300">
+                <p className="mt-1 text-base leading-6 text-slate-300">
                   KIVO helps Drivers and Hosts make more informed charging connections.
                 </p>
               </div>

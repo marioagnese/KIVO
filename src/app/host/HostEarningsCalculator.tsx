@@ -280,7 +280,7 @@ export default function HostEarningsCalculator() {
 
 
       <a
-        href="#founding-host"
+        href="/host/apply"
         className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 px-6 py-4 text-xl font-black text-slate-950 transition hover:bg-emerald-300"
       >
         Become a Founding Host
