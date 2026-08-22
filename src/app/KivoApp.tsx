@@ -3157,6 +3157,28 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => {
+                  window.location.href = "/host/faq";
+                }}
+                className="group inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-full border border-white/15 bg-white/[0.06] px-4 text-sm font-semibold text-white backdrop-blur-md transition hover:border-cyan-300/70 hover:bg-cyan-400/10 sm:h-auto sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-cyan-300"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path strokeLinecap="round" d="M9.8 9a2.35 2.35 0 1 1 3.4 2.1c-.8.45-1.2.9-1.2 1.9" />
+                  <path strokeLinecap="round" d="M12 16h.01" />
+                </svg>
+                <span>FAQ</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
                   window.location.href = "/host";
                 }}
                 className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] p-0 text-sm font-semibold text-white backdrop-blur-md transition hover:border-emerald-300/70 hover:bg-emerald-400/15 sm:h-auto sm:w-auto sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"

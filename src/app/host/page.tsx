@@ -102,6 +102,13 @@ export default function HostPage() {
 
 
             <Link
+              href="/host/faq"
+              className="group hidden items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.06] px-5 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition hover:border-emerald-300/60 hover:bg-emerald-400/10 sm:inline-flex lg:px-6 lg:text-base"
+            >
+              <span>Host FAQ</span>
+            </Link>
+
+            <Link
               href="/host/apply"
               className="group inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] px-4 text-sm font-semibold text-white backdrop-blur-md transition hover:border-emerald-300/70 hover:bg-emerald-400/15 sm:h-auto sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
             >
@@ -879,6 +886,13 @@ export default function HostPage() {
               </Link>
 
               <Link
+                href="/host/faq"
+                className="rounded-xl border border-emerald-300/30 bg-emerald-400/[0.06] px-6 py-3.5 font-semibold text-white transition hover:border-emerald-300/60 hover:bg-emerald-400/10"
+              >
+                Host FAQ
+              </Link>
+
+              <Link
                 href="/"
                 className="rounded-xl border border-white/15 px-6 py-3.5 font-semibold text-white transition hover:border-white/30"
               >
@@ -968,6 +982,60 @@ export default function HostPage() {
 
         </div>
       </section>
+
+
+      {/* =====================================================
+          HOST FOOTER
+      ====================================================== */}
+      <footer className="border-t border-white/10 bg-[#020817]">
+        <div className="mx-auto max-w-[1500px] px-5 py-10 sm:px-8 lg:px-10 lg:py-12">
+
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+
+            <div>
+              <img
+                src="/kivo/kivo-wordmark.png"
+                alt="KIVO — Your Neighborhood Charger"
+                className="h-[72px] w-auto object-contain"
+              />
+
+              <p className="mt-3 max-w-xl text-base leading-7 text-slate-400">
+                Your Neighborhood Charger. KIVO is currently in its Founding Host
+                and marketplace validation phase.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold text-slate-300">
+              <Link href="/host" className="transition hover:text-white">
+                About Hosting
+              </Link>
+
+              <Link href="/host/faq" className="transition hover:text-white">
+                Host FAQ
+              </Link>
+
+              <Link href="/host/apply" className="transition hover:text-white">
+                Become a Founding Host
+              </Link>
+
+              <a href="/host/faq#safety" className="transition hover:text-white">
+                Safety & Trust
+              </a>
+
+              <Link href="/" className="transition hover:text-white">
+                Back to KIVO
+              </Link>
+            </div>
+
+          </div>
+
+          <div className="mt-8 border-t border-white/10 pt-6 text-sm text-slate-500">
+            © 2026 KIVO. Founding Host program and marketplace policies are still
+            being developed and may change before broad launch.
+          </div>
+
+        </div>
+      </footer>
 
     </main>
   );
