@@ -109,6 +109,41 @@ export default function FoundingHostApplication() {
         }
       );
 
+      // Email is intentionally secondary to lead capture.
+      // If communication fails, the Founding Host application
+      // still remains safely stored in Firestore.
+      try {
+        const emailResponse = await fetch(
+          "/api/host/application-email",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: form.name.trim(),
+              phone: form.phone.trim(),
+              email: form.email.trim().toLowerCase(),
+              postalCode: form.postalCode.trim().toUpperCase(),
+              parkingSetup: form.parkingSetup,
+              chargerStatus: form.chargerStatus,
+            }),
+          }
+        );
+
+        if (!emailResponse.ok) {
+          console.error(
+            "Founding Host email notification failed:",
+            await emailResponse.text()
+          );
+        }
+      } catch (emailError) {
+        console.error(
+          "Founding Host email notification failed:",
+          emailError
+        );
+      }
+
       setSubmitted(true);
     } catch (err) {
       console.error(
