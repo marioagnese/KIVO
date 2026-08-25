@@ -53,20 +53,19 @@ service cloud.firestore {
 
     match /hosts/{hostId} {
 
+      // Public marketplace listings remain readable by Drivers.
+      //
+      // Creating, modifying, activating, pausing or deleting
+      // marketplace listings is server-controlled.
+      // Firebase Admin bypasses these client rules.
+      //
+      // This prevents a signed-in user from directly publishing
+      // an ACTIVE listing from the client.
       allow read: if true;
 
-      allow create:
-        if request.auth != null
-        && request.resource.data.ownerUid == request.auth.uid;
-
-      allow update:
-        if request.auth != null
-        && resource.data.ownerUid == request.auth.uid
-        && request.resource.data.ownerUid == request.auth.uid;
-
-      allow delete:
-        if request.auth != null
-        && resource.data.ownerUid == request.auth.uid;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
 
@@ -341,6 +340,32 @@ service cloud.firestore {
         )
         || isKivoAdmin();
 
+      allow delete: if false;
+    }
+
+
+    // ========================================================
+    // HOST ACTIVATION READINESS
+    //
+    // Private operational record created after Host approval.
+    //
+    // KIVO Admin:
+    //   May read activation readiness.
+    //
+    // Host / Driver clients:
+    //   No direct access.
+    //
+    // All activation changes remain server-controlled.
+    // Firebase Admin bypasses client Firestore rules.
+    // ========================================================
+
+    match /hostActivations/{uid} {
+
+      allow read:
+        if isKivoAdmin();
+
+      allow create: if false;
+      allow update: if false;
       allow delete: if false;
     }
 
