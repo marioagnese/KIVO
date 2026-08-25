@@ -114,6 +114,14 @@ export default function AccountModal({
     setError("");
     setMessage("");
 
+    // KIVO Host access is approval-based.
+    // Users cannot grant themselves the Host role.
+    if (role === "host") {
+      onClose();
+      window.location.href = "/host";
+      return;
+    }
+
     // Already authenticated:
     // just add the selected KIVO role.
     if (user) {
