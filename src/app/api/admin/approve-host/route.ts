@@ -85,11 +85,58 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------------------------------
-    // APPROVAL + HOST ROLE
+    // APPROVAL + HOST ROLE + ACTIVATION READINESS
     //
     // Firebase Admin bypasses client Firestore rules.
     // Host role cannot be self-assigned by the user.
+    //
+    // Approval starts the private activation phase.
+    // It does NOT create or activate a public Host listing.
     // --------------------------------------------------------
+
+    const activationRef =
+      adminDb.collection("hostActivations").doc(uid);
+
+    const activationSnapshot =
+      await activationRef.get();
+
+    const activationSeed = {
+      uid,
+
+      leadId:
+        typeof onboarding.leadId === "string"
+          ? onboarding.leadId
+          : null,
+
+      status: "activation_in_progress",
+
+      gates: {
+        safety: {
+          status: "not_started",
+        },
+
+        propertyAccess: {
+          status: "not_started",
+        },
+
+        charger: {
+          status: "not_started",
+        },
+
+        legal: {
+          status: "not_started",
+        },
+
+        listing: {
+          status: "not_started",
+        },
+      },
+
+      blockers: [],
+
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
 
     if (onboarding.status !== "approved") {
       const userRef = adminDb.collection("users").doc(uid);
@@ -122,7 +169,20 @@ export async function POST(request: Request) {
         { merge: true }
       );
 
+      if (!activationSnapshot.exists) {
+        batch.set(
+          activationRef,
+          activationSeed
+        );
+      }
+
       await batch.commit();
+    } else if (!activationSnapshot.exists) {
+      // Backfill Hosts approved before the activation layer existed.
+      // Never overwrite an existing activation record.
+      await activationRef.set(
+        activationSeed
+      );
     }
 
     // --------------------------------------------------------
