@@ -3226,6 +3226,28 @@ export default function Home() {
           ) : (
             <nav className="flex items-center gap-3">
 
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = "/host";
+                }}
+                className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-emerald-300/30 bg-emerald-400/[0.08] p-0 text-sm font-semibold text-white backdrop-blur-md transition hover:border-emerald-300/70 hover:bg-emerald-400/15 sm:h-auto sm:w-auto sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-emerald-300"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m3 11 9-7 9 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5.5 9.5V20h13V9.5" />
+                  <path strokeLinecap="round" d="M12 11v6M9 14h6" />
+                </svg>
+                <span className="hidden sm:inline">Become a host</span>
+              </button>
+
               {hasRole("driver") && (
                 <button
                   type="button"

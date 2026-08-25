@@ -1,0 +1,356 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ========================================================
+    // KIVO ADMIN
+    // ========================================================
+
+    function isKivoAdmin() {
+      return request.auth != null
+        && request.auth.token.email == "admin@kivocharge.com"
+        && request.auth.token.email_verified == true;
+    }
+
+
+    // ========================================================
+    // USERS
+    // ========================================================
+
+    match /users/{userId} {
+
+      allow read:
+        if request.auth != null
+        && request.auth.uid == userId;
+
+      // New users may create their own profile,
+      // but may not self-assign Host access.
+      allow create:
+        if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.roles is list
+        && !request.resource.data.roles.hasAny(["host"]);
+
+      // Users may manage their normal account data and Driver role,
+      // but Host membership must remain unchanged client-side.
+      // KIVO approval grants Host through Firebase Admin.
+      allow update:
+        if request.auth != null
+        && request.auth.uid == userId
+        && resource.data.roles is list
+        && request.resource.data.roles is list
+        && resource.data.roles.hasAny(["host"])
+            == request.resource.data.roles.hasAny(["host"]);
+
+      allow delete: if false;
+    }
+
+
+    // ========================================================
+    // HOST LISTINGS
+    // ========================================================
+
+    match /hosts/{hostId} {
+
+      allow read: if true;
+
+      allow create:
+        if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid;
+
+      allow update:
+        if request.auth != null
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.ownerUid == request.auth.uid;
+
+      allow delete:
+        if request.auth != null
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+
+    // ========================================================
+    // BOOKING REQUESTS
+    // ========================================================
+
+    match /bookingRequests/{requestId} {
+
+      allow create:
+        if request.auth != null
+        && request.resource.data.driverUid == request.auth.uid
+        && request.resource.data.status == "pending"
+        && request.resource.data.hostListingId is string
+        && request.resource.data.hostUid is string
+        && get(
+          /databases/$(database)/documents/hosts/$(request.resource.data.hostListingId)
+        ).data.ownerUid == request.resource.data.hostUid;
+
+
+      allow read:
+        if request.auth != null
+        && (
+          resource.data.driverUid == request.auth.uid
+          || resource.data.hostUid == request.auth.uid
+        );
+
+
+      allow update:
+        if request.auth != null
+        && resource.data.hostUid == request.auth.uid
+
+        && request.resource.data.driverUid
+            == resource.data.driverUid
+
+        && request.resource.data.hostUid
+            == resource.data.hostUid
+
+        && request.resource.data.hostListingId
+            == resource.data.hostListingId
+
+        && request.resource.data.status in [
+          "pending",
+          "accepted",
+          "declined",
+          "completed"
+        ]
+
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "status",
+            "updatedAt",
+            "privateAddress",
+            "arrivalInstructions",
+            "arrivalDetailsSharedAt",
+            "completedAt",
+            "settlementStatus"
+          ]);
+
+
+      allow delete: if false;
+    }
+
+
+    // ========================================================
+    // FOUNDING HOST LEADS
+    //
+    // Public:
+    //   Can submit a new Founding Host application only.
+    //
+    // KIVO Admin:
+    //   Can privately review applications and manage the
+    //   early lifecycle:
+    //
+    //   new → qualified → invited
+    //
+    //   Additional holding / exit states are supported:
+    //   hold, not_qualified, withdrawn
+    //
+    // Applicant-submitted contact/property fields cannot be
+    // modified through the admin lifecycle update.
+    // ========================================================
+
+    match /foundingHostLeads/{leadId} {
+
+      // ------------------------------------------------------
+      // PUBLIC APPLICATION CREATE
+      // ------------------------------------------------------
+
+      allow create:
+        if
+
+          request.resource.data.keys().hasOnly([
+            "status",
+            "name",
+            "phone",
+            "email",
+            "postalCode",
+            "parkingSetup",
+            "chargerStatus",
+            "source",
+            "foundingHost",
+            "createdAt"
+          ])
+
+          && request.resource.data.status == "new"
+
+          && request.resource.data.source
+              == "kivo-host-acquisition-page"
+
+          && request.resource.data.foundingHost == true
+
+
+          // Name.
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 2
+          && request.resource.data.name.size() <= 100
+
+
+          // Phone.
+          && request.resource.data.phone is string
+          && request.resource.data.phone.size() >= 7
+          && request.resource.data.phone.size() <= 40
+
+
+          // Email.
+          && request.resource.data.email is string
+          && request.resource.data.email.size() >= 5
+          && request.resource.data.email.size() <= 200
+
+
+          // ZIP / postal code.
+          && request.resource.data.postalCode is string
+          && request.resource.data.postalCode.size() >= 3
+          && request.resource.data.postalCode.size() <= 20
+
+
+          // Parking configuration.
+          && request.resource.data.parkingSetup in [
+            "Outdoor driveway",
+            "Garage",
+            "Both",
+            "Other"
+          ]
+
+
+          // Charger status.
+          && request.resource.data.chargerStatus in [
+            "Installed",
+            "Installing soon",
+            "Planning",
+            "Not sure"
+          ]
+
+
+          && request.resource.data.createdAt is timestamp;
+
+
+      // ------------------------------------------------------
+      // ADMIN READ
+      // ------------------------------------------------------
+
+      allow read:
+        if isKivoAdmin();
+
+
+      // ------------------------------------------------------
+      // ADMIN LIFECYCLE UPDATE
+      //
+      // Original applicant information stays immutable.
+      // Admin may only change lifecycle/admin metadata.
+      // ------------------------------------------------------
+
+      allow update:
+        if isKivoAdmin()
+
+        && request.resource.data.name
+            == resource.data.name
+
+        && request.resource.data.phone
+            == resource.data.phone
+
+        && request.resource.data.email
+            == resource.data.email
+
+        && request.resource.data.postalCode
+            == resource.data.postalCode
+
+        && request.resource.data.parkingSetup
+            == resource.data.parkingSetup
+
+        && request.resource.data.chargerStatus
+            == resource.data.chargerStatus
+
+        && request.resource.data.source
+            == resource.data.source
+
+        && request.resource.data.foundingHost
+            == resource.data.foundingHost
+
+        && request.resource.data.createdAt
+            == resource.data.createdAt
+
+
+        // Lifecycle states supported during Founding Host phase.
+        && request.resource.data.status in [
+          "new",
+          "qualified",
+          "invited",
+          "hold",
+          "not_qualified",
+          "withdrawn"
+        ]
+
+
+        // Only these admin/lifecycle fields may change.
+        && request.resource.data
+          .diff(resource.data)
+          .affectedKeys()
+          .hasOnly([
+            "status",
+            "qualifiedAt",
+            "invitedAt",
+            "invitationEmailSentAt",
+            "updatedAt",
+            "adminNotes"
+          ]);
+
+
+      // Leads are historical records — never delete them
+      // through the client application.
+      allow delete: if false;
+    }
+
+
+    // ========================================================
+    // HOST ONBOARDING
+    //
+    // Private setup record keyed by Firebase Auth uid.
+    //
+    // Host:
+    //   May create, read and update only their own onboarding.
+    //
+    // KIVO Admin:
+    //   May privately review and update onboarding records.
+    //
+    // Public access is never allowed.
+    // ========================================================
+
+    match /hostOnboarding/{uid} {
+
+      allow create:
+        if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid;
+
+      allow read:
+        if (
+          request.auth != null
+          && request.auth.uid == uid
+        )
+        || isKivoAdmin();
+
+      allow update:
+        if (
+          request.auth != null
+          && request.auth.uid == uid
+          && resource.data.uid == uid
+          && request.resource.data.uid == uid
+        )
+        || isKivoAdmin();
+
+      allow delete: if false;
+    }
+
+
+    // ========================================================
+    // EVERYTHING ELSE
+    // ========================================================
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
