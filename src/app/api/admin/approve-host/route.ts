@@ -3,6 +3,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { Resend } from "resend";
 
 import {
+  adminAuth,
   adminDb,
   verifyKivoAdminToken,
 } from "@/lib/firebaseAdmin";
@@ -85,13 +86,11 @@ export async function POST(request: Request) {
     }
 
     // --------------------------------------------------------
-    // APPROVAL + HOST ROLE + ACTIVATION READINESS
+    // FOUNDING SETUP APPROVAL + ACTIVATION READINESS
     //
-    // Firebase Admin bypasses client Firestore rules.
-    // Host role cannot be self-assigned by the user.
-    //
-    // Approval starts the private activation phase.
-    // It does NOT create or activate a public Host listing.
+    // Approval starts the private final activation phase.
+    // It does NOT grant the operational Host role and does
+    // NOT create or activate a public Host listing.
     // --------------------------------------------------------
 
     const activationRef =
@@ -139,25 +138,7 @@ export async function POST(request: Request) {
     };
 
     if (onboarding.status !== "approved") {
-      const userRef = adminDb.collection("users").doc(uid);
-      const userSnapshot = await userRef.get();
-
       const batch = adminDb.batch();
-
-      batch.set(
-        userRef,
-        {
-          email,
-          roles: FieldValue.arrayUnion("host"),
-          ...(userSnapshot.exists
-            ? {}
-            : {
-                createdAt: FieldValue.serverTimestamp(),
-              }),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
 
       batch.set(
         onboardingRef,
@@ -205,6 +186,24 @@ export async function POST(request: Request) {
           throw new Error("Email service is not configured.");
         }
 
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+
+        if (!appUrl) {
+          throw new Error("KIVO application URL is not configured.");
+        }
+
+        const activationUrl =
+          `${appUrl.replace(/\/$/, "")}/host/activation`;
+
+        const activationLink =
+          await adminAuth.generateSignInWithEmailLink(
+            email,
+            {
+              url: activationUrl,
+              handleCodeInApp: true,
+            }
+          );
+
         const resend = new Resend(process.env.RESEND_API_KEY);
 
         const hostResult = await resend.emails.send({
@@ -216,7 +215,7 @@ export async function POST(request: Request) {
             process.env.KIVO_EMAIL_REPLY_TO ||
             process.env.KIVO_INTERNAL_EMAIL ||
             undefined,
-          subject: "You’re approved as a KIVO Host",
+          subject: "You’re approved — finalize your KIVO Host setup",
           html: `
             <div style="background:#f6f8fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
               <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:24px;padding:36px;">
@@ -230,21 +229,34 @@ export async function POST(request: Request) {
                 </h1>
 
                 <p style="font-size:18px;line-height:1.7;color:#475569;margin:0 0 20px;">
-                  Your KIVO Host setup has been reviewed and your account now has Host access.
+                  Your KIVO Founding Host setup has been reviewed and approved. Now it’s time to finalize your KIVO Host setup.
                 </p>
 
                 <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:16px;padding:20px;margin:26px 0;">
                   <strong style="display:block;font-size:17px;color:#065f46;margin-bottom:8px;">
-                    Welcome to KIVO Hosts.
+                    Next: finalize your Host setup.
                   </strong>
 
                   <p style="font-size:16px;line-height:1.6;color:#475569;margin:0;">
-                    Your Host account is approved. Your charger is still not automatically public or bookable.
+                    Your charger is still private and cannot be booked yet. Complete the remaining setup steps before your KIVO Host account becomes active.
                   </p>
                 </div>
 
                 <p style="font-size:16px;line-height:1.7;color:#475569;margin:0 0 20px;">
-                  KIVO will continue with any remaining safety, listing and activation steps before Drivers can book your charger.
+                  We already have your charger, parking, photos and hosting preferences, so you won’t need to enter them again. Next, we’ll guide you through the remaining account, identity, safety, agreement, property and listing steps.
+                </p>
+
+                <div style="margin:30px 0;">
+                  <a
+                    href="${activationLink}"
+                    style="display:inline-block;background:#34d399;color:#020817;text-decoration:none;font-size:17px;font-weight:800;padding:15px 24px;border-radius:999px;"
+                  >
+                    Finalize my Host setup →
+                  </a>
+                </div>
+
+                <p style="font-size:14px;line-height:1.6;color:#64748b;margin:0 0 20px;">
+                  This secure setup link is intended for ${escapeHtml(email)}.
                 </p>
 
                 <p style="font-size:16px;line-height:1.7;color:#020817;margin:26px 0 0;font-weight:700;">
@@ -268,16 +280,16 @@ export async function POST(request: Request) {
               "KIVO <onboarding@resend.dev>",
             to: process.env.KIVO_INTERNAL_EMAIL,
             replyTo: email,
-            subject: `KIVO Host approved — ${postalCode || "No ZIP"}`,
+            subject: `KIVO Founding setup approved — ${postalCode || "No ZIP"}`,
             html: `
               <div style="font-family:Arial,Helvetica,sans-serif;color:#0f172a;max-width:680px;margin:0 auto;padding:24px;">
 
                 <h1 style="font-size:28px;margin-bottom:8px;">
-                  KIVO Host approved
+                  KIVO Founding Host setup approved
                 </h1>
 
                 <p style="color:#64748b;">
-                  The Host account has been approved and the Firebase user now has the Host role.
+                  The Founding Host setup has been approved and final activation has started. The operational Host role has not been granted yet.
                 </p>
 
                 <table style="width:100%;border-collapse:collapse;margin-top:24px;">

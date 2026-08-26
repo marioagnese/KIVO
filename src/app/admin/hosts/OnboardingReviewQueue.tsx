@@ -70,6 +70,7 @@ export default function OnboardingReviewQueue() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [approvingUid, setApprovingUid] = useState<string | null>(null);
+  const [resendingUid, setResendingUid] = useState<string | null>(null);
   const [photoUrls, setPhotoUrls] = useState<
     Record<string, Record<string, string>>
   >({});
@@ -163,7 +164,7 @@ export default function OnboardingReviewQueue() {
 
     if (
       !window.confirm(
-        `Approve ${record.name || record.email} as a KIVO Host?\n\nThis grants Host account access but does not publish or activate a charger listing.`
+        `Approve ${record.name || record.email}'s Founding Host setup?\n\nThis starts final Host activation. It does not grant operational Host access or publish a charger listing.`
       )
     ) {
       return;
@@ -196,7 +197,7 @@ export default function OnboardingReviewQueue() {
       setMessage(
         result.emailWarning
           ? `${record.name || "Host"} was approved, but the approval email needs attention.`
-          : `${record.name || "Host"} is now an approved KIVO Host. Approval email sent.`
+          : `${record.name || "Host"}'s Founding Host setup is approved. Final activation is now ready. Approval email sent.`
       );
     } catch (err) {
       console.error("Unable to approve KIVO Host:", err);
@@ -206,6 +207,62 @@ export default function OnboardingReviewQueue() {
       );
     } finally {
       setApprovingUid(null);
+    }
+  }
+
+  async function resendSetupLink(record: OnboardingRecord) {
+    if (!auth?.currentUser) {
+      setError("KIVO admin authentication is unavailable.");
+      return;
+    }
+
+    setResendingUid(record.uid);
+    setError("");
+    setMessage("");
+
+    try {
+      const idToken =
+        await auth.currentUser.getIdToken(true);
+
+      const response = await fetch(
+        "/api/admin/resend-host-activation-link",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            uid: record.uid,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to resend Host setup link."
+        );
+      }
+
+      setMessage(
+        `A fresh setup link was sent to ${record.email}.`
+      );
+    } catch (err) {
+      console.error(
+        "Unable to resend KIVO Host setup link:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to resend Host setup link."
+      );
+    } finally {
+      setResendingUid(null);
     }
   }
 
@@ -281,12 +338,25 @@ export default function OnboardingReviewQueue() {
                     >
                       {approvingUid === record.uid
                         ? "Approving..."
-                        : "Approve Host"}
+                        : "Approve setup"}
                     </button>
                   ) : (
-                    <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-5 py-3 text-sm font-black text-emerald-200">
-                      ✓ Approved
-                    </span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-5 py-3 text-sm font-black text-emerald-200">
+                        ✓ Approved
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={resendingUid === record.uid}
+                        onClick={() => resendSetupLink(record)}
+                        className="rounded-full border border-white/15 px-5 py-3 text-sm font-black text-slate-200 transition hover:border-emerald-300/50 hover:text-emerald-200 disabled:opacity-50"
+                      >
+                        {resendingUid === record.uid
+                          ? "Sending..."
+                          : "Resend setup link"}
+                      </button>
+                    </div>
                   )}
                 </div>
 
