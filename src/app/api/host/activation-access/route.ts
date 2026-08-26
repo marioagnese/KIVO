@@ -166,6 +166,52 @@ export async function POST(request: Request) {
             activation.account?.passwordConfigured === true,
         },
 
+        propertyConfirmation: {
+          streetAddress:
+            String(
+              activation.privateProperty?.streetAddress ?? ""
+            ),
+          unit:
+            String(
+              activation.privateProperty?.unit ?? ""
+            ),
+          city:
+            String(
+              activation.privateProperty?.city ?? ""
+            ),
+          state:
+            String(
+              activation.privateProperty?.state ?? ""
+            ),
+          postalCode:
+            String(
+              activation.privateProperty?.postalCode ?? ""
+            ),
+          authority:
+            String(
+              activation.privateProperty?.authority ?? ""
+            ),
+          privateAccessNotes:
+            String(
+              activation.privateProperty?.privateAccessNotes ?? ""
+            ),
+          chargingLocationConfirmed:
+            activation.privateProperty
+              ?.chargingLocationConfirmed === true,
+          hostingAuthorityConfirmed:
+            activation.privateProperty
+              ?.hostingAuthorityConfirmed === true,
+        },
+
+        chargerConfirmation: {
+          informationConfirmed:
+            activation.chargerConfirmation
+              ?.informationConfirmed === true,
+          operationalConfirmed:
+            activation.chargerConfirmation
+              ?.operationalConfirmed === true,
+        },
+
         gates: {
           safety: {
             status:

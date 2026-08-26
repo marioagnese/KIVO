@@ -39,6 +39,23 @@ type ActivationData = {
       passwordConfigured: boolean;
     };
 
+    propertyConfirmation: {
+      streetAddress: string;
+      unit: string;
+      city: string;
+      state: string;
+      postalCode: string;
+      authority: string;
+      privateAccessNotes: string;
+      chargingLocationConfirmed: boolean;
+      hostingAuthorityConfirmed: boolean;
+    };
+
+    chargerConfirmation: {
+      informationConfirmed: boolean;
+      operationalConfirmed: boolean;
+    };
+
     gates: {
       safety: { status: string };
       propertyAccess: { status: string };
@@ -77,6 +94,59 @@ export default function HostActivationPage() {
 
   const [data, setData] =
     useState<ActivationData | null>(null);
+
+  const [propertyOpen, setPropertyOpen] =
+    useState(false);
+
+  const [streetAddress, setStreetAddress] =
+    useState("");
+
+  const [unit, setUnit] =
+    useState("");
+
+  const [city, setCity] =
+    useState("");
+
+  const [propertyState, setPropertyState] =
+    useState("");
+
+  const [propertyPostalCode, setPropertyPostalCode] =
+    useState("");
+
+  const [authority, setAuthority] =
+    useState("");
+
+  const [privateAccessNotes, setPrivateAccessNotes] =
+    useState("");
+
+  const [
+    chargingLocationConfirmed,
+    setChargingLocationConfirmed,
+  ] = useState(false);
+
+  const [
+    hostingAuthorityConfirmed,
+    setHostingAuthorityConfirmed,
+  ] = useState(false);
+
+  const [savingProperty, setSavingProperty] =
+    useState(false);
+
+  const [chargerOpen, setChargerOpen] =
+    useState(false);
+
+  const [
+    chargerInformationConfirmed,
+    setChargerInformationConfirmed,
+  ] = useState(false);
+
+  const [
+    chargerOperationalConfirmed,
+    setChargerOperationalConfirmed,
+  ] = useState(false);
+
+  const [savingCharger, setSavingCharger] =
+    useState(false);
 
   useEffect(() => {
     void initializeActivation();
@@ -366,6 +436,308 @@ export default function HostActivationPage() {
     }
   }
 
+  function openPropertyConfirmation() {
+    if (!data) {
+      return;
+    }
+
+    const saved =
+      data.activation.propertyConfirmation;
+
+    setStreetAddress(
+      saved?.streetAddress || ""
+    );
+    setUnit(saved?.unit || "");
+    setCity(saved?.city || "");
+    setPropertyState(saved?.state || "");
+    setPropertyPostalCode(
+      saved?.postalCode ||
+        data.host.postalCode ||
+        ""
+    );
+    setAuthority(saved?.authority || "");
+    setPrivateAccessNotes(
+      saved?.privateAccessNotes || ""
+    );
+    setChargingLocationConfirmed(
+      saved?.chargingLocationConfirmed === true
+    );
+    setHostingAuthorityConfirmed(
+      saved?.hostingAuthorityConfirmed === true
+    );
+
+    setError("");
+    setPropertyOpen(true);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("property-confirmation-form")
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    }, 50);
+  }
+
+  async function handlePropertySubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!auth?.currentUser || !data) {
+      setError(
+        "Your secure KIVO session is unavailable."
+      );
+      return;
+    }
+
+    if (
+      !streetAddress.trim() ||
+      !city.trim() ||
+      !propertyState.trim() ||
+      !propertyPostalCode.trim() ||
+      !authority
+    ) {
+      setError(
+        "Complete all required property information."
+      );
+      return;
+    }
+
+    if (
+      !chargingLocationConfirmed ||
+      !hostingAuthorityConfirmed
+    ) {
+      setError(
+        "Confirm both property statements before continuing."
+      );
+      return;
+    }
+
+    setSavingProperty(true);
+    setError("");
+
+    try {
+      const idToken =
+        await auth.currentUser.getIdToken(true);
+
+      const response = await fetch(
+        "/api/host/activation-property-complete",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            streetAddress:
+              streetAddress.trim(),
+            unit:
+              unit.trim(),
+            city:
+              city.trim(),
+            state:
+              propertyState.trim(),
+            postalCode:
+              propertyPostalCode.trim(),
+            authority,
+            privateAccessNotes:
+              privateAccessNotes.trim(),
+            chargingLocationConfirmed,
+            hostingAuthorityConfirmed,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to save property confirmation."
+        );
+      }
+
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              activation: {
+                ...current.activation,
+                gates: {
+                  ...current.activation.gates,
+                  propertyAccess: {
+                    status: "complete",
+                  },
+                },
+
+                propertyConfirmation: {
+                  streetAddress:
+                    streetAddress.trim(),
+                  unit:
+                    unit.trim(),
+                  city:
+                    city.trim(),
+                  state:
+                    propertyState
+                      .trim()
+                      .toUpperCase(),
+                  postalCode:
+                    propertyPostalCode.trim(),
+                  authority,
+                  privateAccessNotes:
+                    privateAccessNotes.trim(),
+                  chargingLocationConfirmed:
+                    true,
+                  hostingAuthorityConfirmed:
+                    true,
+                },
+              },
+            }
+          : current
+      );
+
+      setPropertyOpen(false);
+    } catch (err) {
+      console.error(
+        "Unable to save KIVO property confirmation:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "We couldn't save your property confirmation."
+      );
+    } finally {
+      setSavingProperty(false);
+    }
+  }
+
+  function openChargerConfirmation() {
+    if (!data) {
+      return;
+    }
+
+    setChargerInformationConfirmed(
+      data.activation.chargerConfirmation
+        ?.informationConfirmed === true
+    );
+
+    setChargerOperationalConfirmed(
+      data.activation.chargerConfirmation
+        ?.operationalConfirmed === true
+    );
+
+    setError("");
+    setChargerOpen(true);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("charger-confirmation-form")
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    }, 50);
+  }
+
+  async function handleChargerSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!auth?.currentUser || !data) {
+      setError(
+        "Your secure KIVO session is unavailable."
+      );
+      return;
+    }
+
+    if (
+      !chargerInformationConfirmed ||
+      !chargerOperationalConfirmed
+    ) {
+      setError(
+        "Confirm both charger statements before continuing."
+      );
+      return;
+    }
+
+    setSavingCharger(true);
+    setError("");
+
+    try {
+      const idToken =
+        await auth.currentUser.getIdToken(true);
+
+      const response = await fetch(
+        "/api/host/activation-charger-complete",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            informationConfirmed:
+              chargerInformationConfirmed,
+            operationalConfirmed:
+              chargerOperationalConfirmed,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to save charger confirmation."
+        );
+      }
+
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              activation: {
+                ...current.activation,
+                gates: {
+                  ...current.activation.gates,
+                  charger: {
+                    status: "complete",
+                  },
+                },
+
+                chargerConfirmation: {
+                  informationConfirmed: true,
+                  operationalConfirmed: true,
+                },
+              },
+            }
+          : current
+      );
+
+      setChargerOpen(false);
+    } catch (err) {
+      console.error(
+        "Unable to save KIVO charger confirmation:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "We couldn't save your charger confirmation."
+      );
+    } finally {
+      setSavingCharger(false);
+    }
+  }
+
   if (status === "checking") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#020817] px-6 text-white">
@@ -615,12 +987,26 @@ export default function HostActivationPage() {
               title="Property confirmation"
               description="Confirm your private charging address and authority to host there."
               status={data.activation.gates.propertyAccess.status}
+              onClick={openPropertyConfirmation}
+              actionLabel={
+                data.activation.gates.propertyAccess.status ===
+                "complete"
+                  ? "Review"
+                  : "Complete"
+              }
             />
 
             <ActivationCard
               title="Charger confirmation"
               description="Review the charger information you already supplied and confirm it is operational."
               status={data.activation.gates.charger.status}
+              onClick={openChargerConfirmation}
+              actionLabel={
+                data.activation.gates.charger.status ===
+                "complete"
+                  ? "Review"
+                  : "Complete"
+              }
             />
 
             <ActivationCard
@@ -635,6 +1021,351 @@ export default function HostActivationPage() {
               status={data.activation.gates.listing.status}
             />
           </div>
+
+          {chargerOpen && (
+            <form
+              id="charger-confirmation-form"
+              onSubmit={handleChargerSubmit}
+              className="mt-6 scroll-mt-8 rounded-[28px] border border-emerald-300/20 bg-[#07111f] p-6 sm:p-8"
+            >
+              <div className="flex items-start justify-between gap-5">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">
+                    CHARGER CONFIRMATION
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-black">
+                    Confirm your charger is ready.
+                  </h2>
+
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+                    We already have the charger information you supplied during
+                    your Founding Host setup. Review it below and confirm that
+                    the charger is installed and operational.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChargerOpen(false);
+                    setError("");
+                  }}
+                  className="shrink-0 text-sm font-black text-slate-400 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-7 rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-slate-500">
+                  SAVED CHARGER
+                </p>
+
+                <div className="mt-4 space-y-2 text-base text-slate-300">
+                  <p>
+                    <span className="font-black text-white">
+                      Brand / model:
+                    </span>{" "}
+                    {[
+                      String(charger.brand ?? ""),
+                      String(charger.model ?? ""),
+                    ]
+                      .filter(Boolean)
+                      .join(" ") ||
+                      "Information saved"}
+                  </p>
+
+                  <p>
+                    <span className="font-black text-white">
+                      Connector:
+                    </span>{" "}
+                    {String(
+                      charger.connector ??
+                        "Information saved"
+                    )}
+                  </p>
+
+                  <p>
+                    <span className="font-black text-white">
+                      Power:
+                    </span>{" "}
+                    {String(
+                      charger.power ??
+                        "Information saved"
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <label className="flex items-start gap-3 text-sm leading-6 text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={
+                      chargerInformationConfirmed
+                    }
+                    onChange={(event) =>
+                      setChargerInformationConfirmed(
+                        event.target.checked
+                      )
+                    }
+                    className="mt-1 h-4 w-4"
+                  />
+
+                  <span>
+                    I confirm the charger information shown above is accurate.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 text-sm leading-6 text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={
+                      chargerOperationalConfirmed
+                    }
+                    onChange={(event) =>
+                      setChargerOperationalConfirmed(
+                        event.target.checked
+                      )
+                    }
+                    className="mt-1 h-4 w-4"
+                  />
+
+                  <span>
+                    I confirm this charger is installed, operational and available
+                    for charging sessions when I make it available through KIVO.
+                  </span>
+                </label>
+              </div>
+
+              {error && (
+                <ErrorBox message={error} />
+              )}
+
+              <button
+                type="submit"
+                disabled={savingCharger}
+                className="mt-7 rounded-full bg-emerald-400 px-7 py-4 text-base font-black text-slate-950 transition hover:bg-emerald-300 disabled:opacity-50"
+              >
+                {savingCharger
+                  ? "Saving charger..."
+                  : "Confirm charger →"}
+              </button>
+            </form>
+          )}
+
+          {propertyOpen && (
+            <form
+              id="property-confirmation-form"
+              onSubmit={handlePropertySubmit}
+              className="mt-6 scroll-mt-8 rounded-[28px] border border-emerald-300/20 bg-[#07111f] p-6 sm:p-8"
+            >
+              <div className="flex items-start justify-between gap-5">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">
+                    PROPERTY CONFIRMATION
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-black">
+                    Confirm your private charging location.
+                  </h2>
+
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+                    Your exact street address is private KIVO account information.
+                    Drivers will not see it publicly. Private arrival details are only
+                    shared through the controlled booking flow.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPropertyOpen(false);
+                    setError("");
+                  }}
+                  className="shrink-0 text-sm font-black text-slate-400 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-7 grid gap-5 sm:grid-cols-2">
+                <label className="sm:col-span-2">
+                  <span className="text-sm font-black text-slate-200">
+                    Street address *
+                  </span>
+
+                  <input
+                    value={streetAddress}
+                    onChange={(event) =>
+                      setStreetAddress(event.target.value)
+                    }
+                    autoComplete="street-address"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  />
+                </label>
+
+                <label>
+                  <span className="text-sm font-black text-slate-200">
+                    Unit / Apt
+                  </span>
+
+                  <input
+                    value={unit}
+                    onChange={(event) =>
+                      setUnit(event.target.value)
+                    }
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  />
+                </label>
+
+                <label>
+                  <span className="text-sm font-black text-slate-200">
+                    City *
+                  </span>
+
+                  <input
+                    value={city}
+                    onChange={(event) =>
+                      setCity(event.target.value)
+                    }
+                    autoComplete="address-level2"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  />
+                </label>
+
+                <label>
+                  <span className="text-sm font-black text-slate-200">
+                    State *
+                  </span>
+
+                  <input
+                    value={propertyState}
+                    onChange={(event) =>
+                      setPropertyState(event.target.value)
+                    }
+                    maxLength={2}
+                    placeholder="TX"
+                    autoComplete="address-level1"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 uppercase text-white outline-none focus:border-emerald-400"
+                  />
+                </label>
+
+                <label>
+                  <span className="text-sm font-black text-slate-200">
+                    ZIP code *
+                  </span>
+
+                  <input
+                    value={propertyPostalCode}
+                    onChange={(event) =>
+                      setPropertyPostalCode(
+                        event.target.value
+                      )
+                    }
+                    autoComplete="postal-code"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  />
+                </label>
+
+                <label className="sm:col-span-2">
+                  <span className="text-sm font-black text-slate-200">
+                    Your authority at this property *
+                  </span>
+
+                  <select
+                    value={authority}
+                    onChange={(event) =>
+                      setAuthority(event.target.value)
+                    }
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-[#07111f] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  >
+                    <option value="">
+                      Select one
+                    </option>
+                    <option value="owner">
+                      I own this property
+                    </option>
+                    <option value="authorized_renter">
+                      I rent and have authority to offer charging here
+                    </option>
+                    <option value="other_authorized">
+                      I otherwise have authority to offer charging here
+                    </option>
+                  </select>
+                </label>
+
+                <label className="sm:col-span-2">
+                  <span className="text-sm font-black text-slate-200">
+                    Private arrival / access notes
+                  </span>
+
+                  <textarea
+                    value={privateAccessNotes}
+                    onChange={(event) =>
+                      setPrivateAccessNotes(
+                        event.target.value
+                      )
+                    }
+                    rows={4}
+                    placeholder="Optional: gate instructions, driveway location, parking guidance, or other private arrival details."
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <label className="flex items-start gap-3 text-sm leading-6 text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={chargingLocationConfirmed}
+                    onChange={(event) =>
+                      setChargingLocationConfirmed(
+                        event.target.checked
+                      )
+                    }
+                    className="mt-1 h-4 w-4"
+                  />
+
+                  <span>
+                    I confirm this is the location where KIVO charging sessions would take place.
+                  </span>
+                </label>
+
+                <label className="flex items-start gap-3 text-sm leading-6 text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={hostingAuthorityConfirmed}
+                    onChange={(event) =>
+                      setHostingAuthorityConfirmed(
+                        event.target.checked
+                      )
+                    }
+                    className="mt-1 h-4 w-4"
+                  />
+
+                  <span>
+                    I confirm that I have authority to offer EV charging access at this property.
+                  </span>
+                </label>
+              </div>
+
+              {error && (
+                <ErrorBox message={error} />
+              )}
+
+              <button
+                type="submit"
+                disabled={savingProperty}
+                className="mt-7 rounded-full bg-emerald-400 px-7 py-4 text-base font-black text-slate-950 transition hover:bg-emerald-300 disabled:opacity-50"
+              >
+                {savingProperty
+                  ? "Saving property..."
+                  : "Confirm property →"}
+              </button>
+            </form>
+          )}
         </div>
 
         <div className="mt-8 rounded-2xl border border-white/10 bg-white/[0.035] px-5 py-4 text-sm leading-6 text-slate-400">
@@ -685,10 +1416,14 @@ function ActivationCard({
   title,
   description,
   status,
+  onClick,
+  actionLabel,
 }: {
   title: string;
   description: string;
   status: string;
+  onClick?: () => void;
+  actionLabel?: string;
 }) {
   const normalized =
     status.replaceAll("_", " ");
@@ -708,6 +1443,16 @@ function ActivationCard({
       <p className="mt-3 text-sm leading-6 text-slate-400">
         {description}
       </p>
+
+      {onClick && (
+        <button
+          type="button"
+          onClick={onClick}
+          className="mt-5 rounded-full border border-emerald-300/30 px-4 py-2 text-sm font-black text-emerald-300 transition hover:bg-emerald-300/10"
+        >
+          {actionLabel || "Continue"} →
+        </button>
+      )}
     </div>
   );
 }
