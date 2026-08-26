@@ -16,6 +16,10 @@ import {
   auth,
 } from "@/lib/firebase";
 
+import KivoHostAgreement, {
+  KIVO_HOST_AGREEMENT_VERSION,
+} from "@/components/host/KivoHostAgreement";
+
 type ActivationData = {
   host: {
     uid: string;
@@ -146,6 +150,18 @@ export default function HostActivationPage() {
   ] = useState(false);
 
   const [savingCharger, setSavingCharger] =
+    useState(false);
+
+  const [legalOpen, setLegalOpen] =
+    useState(false);
+
+  const [agreementScrolled, setAgreementScrolled] =
+    useState(false);
+
+  const [agreementAccepted, setAgreementAccepted] =
+    useState(false);
+
+  const [savingLegal, setSavingLegal] =
     useState(false);
 
   useEffect(() => {
@@ -738,6 +754,139 @@ export default function HostActivationPage() {
     }
   }
 
+  function openLegalConfirmation() {
+    if (!data) {
+      return;
+    }
+
+    setError("");
+
+    const alreadyAccepted =
+      data.activation.gates.legal.status ===
+      "complete";
+
+    setAgreementAccepted(alreadyAccepted);
+    setAgreementScrolled(alreadyAccepted);
+    setLegalOpen(true);
+
+    window.setTimeout(() => {
+      document
+        .getElementById("host-agreement-form")
+        ?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+    }, 50);
+  }
+
+  function handleAgreementScroll(
+    event: React.UIEvent<HTMLDivElement>
+  ) {
+    const element = event.currentTarget;
+
+    const nearBottom =
+      element.scrollTop +
+        element.clientHeight >=
+      element.scrollHeight - 20;
+
+    if (nearBottom) {
+      setAgreementScrolled(true);
+    }
+  }
+
+  async function handleLegalSubmit(
+    event: React.FormEvent<HTMLFormElement>
+  ) {
+    event.preventDefault();
+
+    if (!auth?.currentUser || !data) {
+      setError(
+        "Your secure KIVO session is unavailable."
+      );
+      return;
+    }
+
+    if (!agreementScrolled) {
+      setError(
+        "Scroll through the Host Agreement before accepting it."
+      );
+      return;
+    }
+
+    if (!agreementAccepted) {
+      setError(
+        "You must agree to the KIVO Host Agreement before continuing."
+      );
+      return;
+    }
+
+    setSavingLegal(true);
+    setError("");
+
+    try {
+      const idToken =
+        await auth.currentUser.getIdToken(true);
+
+      const response = await fetch(
+        "/api/host/activation-legal-complete",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            accepted: true,
+            version:
+              KIVO_HOST_AGREEMENT_VERSION,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to save Host Agreement acceptance."
+        );
+      }
+
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              activation: {
+                ...current.activation,
+                gates: {
+                  ...current.activation.gates,
+                  legal: {
+                    status: "complete",
+                  },
+                },
+              },
+            }
+          : current
+      );
+
+      setLegalOpen(false);
+    } catch (err) {
+      console.error(
+        "Unable to save KIVO Host Agreement:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "We couldn't save your Host Agreement acceptance."
+      );
+    } finally {
+      setSavingLegal(false);
+    }
+  }
+
   if (status === "checking") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#020817] px-6 text-white">
@@ -1013,6 +1162,13 @@ export default function HostActivationPage() {
               title="Host agreement"
               description="Review and accept the current KIVO Host agreement and required terms."
               status={data.activation.gates.legal.status}
+              onClick={openLegalConfirmation}
+              actionLabel={
+                data.activation.gates.legal.status ===
+                "complete"
+                  ? "Review"
+                  : "Complete"
+              }
             />
 
             <ActivationCard
@@ -1021,6 +1177,102 @@ export default function HostActivationPage() {
               status={data.activation.gates.listing.status}
             />
           </div>
+
+          {legalOpen && (
+            <form
+              id="host-agreement-form"
+              onSubmit={handleLegalSubmit}
+              className="mt-6 scroll-mt-8 rounded-[28px] border border-emerald-300/20 bg-[#07111f] p-6 sm:p-8"
+            >
+              <div className="flex items-start justify-between gap-5">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">
+                    HOST AGREEMENT
+                  </p>
+
+                  <h2 className="mt-2 text-2xl font-black">
+                    Review the KIVO Host Agreement.
+                  </h2>
+
+                  <p className="mt-2 text-sm leading-6 text-slate-400">
+                    Version {KIVO_HOST_AGREEMENT_VERSION}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLegalOpen(false);
+                    setError("");
+                  }}
+                  className="shrink-0 text-sm font-black text-slate-400 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div
+                onScroll={handleAgreementScroll}
+                className="mt-7 h-[520px] overflow-y-auto rounded-2xl border border-white/10 bg-[#020817] p-6"
+              >
+                <KivoHostAgreement />
+              </div>
+
+              {data.activation.gates.legal.status !==
+                "complete" && (
+                <p className="mt-3 text-xs font-bold text-slate-500">
+                  Scroll to the bottom of the agreement to enable acceptance.
+                </p>
+              )}
+
+              <label className="mt-6 flex items-start gap-3 text-sm leading-6 text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={agreementAccepted}
+                  disabled={!agreementScrolled}
+                  onChange={(event) =>
+                    setAgreementAccepted(
+                      event.target.checked
+                    )
+                  }
+                  className="mt-1 h-4 w-4 disabled:opacity-40"
+                />
+
+                <span>
+                  I have read and agree to the KIVO Host Agreement, version{" "}
+                  <strong className="text-white">
+                    {KIVO_HOST_AGREEMENT_VERSION}
+                  </strong>
+                  .
+                </span>
+              </label>
+
+              {error && (
+                <ErrorBox message={error} />
+              )}
+
+              {data.activation.gates.legal.status ===
+              "complete" ? (
+                <div className="mt-7 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-5 py-4 text-sm font-bold text-emerald-200">
+                  This version of the KIVO Host Agreement has been accepted.
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={
+                    savingLegal ||
+                    !agreementScrolled ||
+                    !agreementAccepted
+                  }
+                  className="mt-7 rounded-full bg-emerald-400 px-7 py-4 text-base font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {savingLegal
+                    ? "Saving agreement..."
+                    : "Accept Host Agreement →"}
+                </button>
+              )}
+            </form>
+          )}
 
           {chargerOpen && (
             <form
