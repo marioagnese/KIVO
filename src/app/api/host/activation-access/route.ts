@@ -212,6 +212,56 @@ export async function POST(request: Request) {
               ?.operationalConfirmed === true,
         },
 
+        identitySafety: {
+          status:
+            String(
+              activation.identitySafety?.status ??
+                "not_started"
+            ),
+          identityInformationConfirmed:
+            activation.identitySafety
+              ?.identityInformationConfirmed === true,
+          consentToVerification:
+            activation.identitySafety
+              ?.consentToVerification === true,
+          provider:
+            String(
+              activation.identitySafety?.provider ??
+                ""
+            ),
+        },
+
+        publicListing: {
+          displayName:
+            String(
+              activation.publicListing?.displayName ?? ""
+            ),
+          city:
+            String(
+              activation.publicListing?.city ?? ""
+            ),
+          state:
+            String(
+              activation.publicListing?.state ?? ""
+            ),
+          postalCode:
+            String(
+              activation.publicListing?.postalCode ?? ""
+            ),
+          amenities:
+            Array.isArray(
+              activation.publicListing?.amenities
+            )
+              ? activation.publicListing.amenities
+              : [],
+          publicInformationConfirmed:
+            activation.publicListing
+              ?.publicInformationConfirmed === true,
+          addressPrivacyAcknowledged:
+            activation.publicListing
+              ?.addressPrivacyAcknowledged === true,
+        },
+
         gates: {
           safety: {
             status:
