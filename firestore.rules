@@ -81,6 +81,13 @@ service cloud.firestore {
         && request.resource.data.status == "pending"
         && request.resource.data.hostListingId is string
         && request.resource.data.hostUid is string
+
+        // Real booking requests require a server-controlled
+        // booking-ready KivoDriver activation.
+        && get(
+          /databases/$(database)/documents/driverActivations/$(request.auth.uid)
+        ).data.bookingReadiness.status == "complete"
+
         && get(
           /databases/$(database)/documents/hosts/$(request.resource.data.hostListingId)
         ).data.ownerUid == request.resource.data.hostUid;
@@ -368,7 +375,35 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+    // ========================================================
+    // DRIVER ACTIVATION READINESS
+    //
+    // Private operational record for KIVO Drivers.
+    //
+    // Driver:
+    //   No direct client writes. Driver setup changes are
+    //   performed through authenticated KIVO server routes.
+    //
+    // KIVO Admin:
+    //   May read readiness records for support / exceptions.
+    //
+    // Identity verification status must never be self-granted
+    // by the Driver client.
+    // ========================================================
 
+    match /driverActivations/{uid} {
+
+      allow read:
+        if (
+          request.auth != null
+          && request.auth.uid == uid
+        )
+        || isKivoAdmin();
+
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
 
     // ========================================================
     // EVERYTHING ELSE

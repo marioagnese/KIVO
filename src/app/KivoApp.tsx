@@ -3248,17 +3248,46 @@ export default function Home() {
                 <span className="hidden sm:inline">Become a host</span>
               </button>
 
-              {hasRole("driver") && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setAccountHome("driver")
-                  }
-                  className="rounded-2xl border border-cyan-400/40 bg-slate-900/55 px-5 py-3 text-sm font-semibold text-cyan-300 transition hover:border-cyan-400"
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href =
+                    "/driver";
+                }}
+                className="group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-cyan-300/30 bg-cyan-400/[0.08] p-0 text-sm font-semibold text-white backdrop-blur-md transition hover:border-cyan-300/70 hover:bg-cyan-400/15 sm:h-auto sm:w-auto sm:gap-2.5 sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-cyan-300"
                 >
-                  Driver
-                </button>
-              )}
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 16h14l-1.4-5.1A2.6 2.6 0 0 0 15.1 9H8.9a2.6 2.6 0 0 0-2.5 1.9L5 16Z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 16v2.5M20 16v2.5"
+                  />
+                  <circle cx="7.5" cy="16" r="1.2" />
+                  <circle cx="16.5" cy="16" r="1.2" />
+                  <path
+                    strokeLinecap="round"
+                    d="M7.5 12h9"
+                  />
+                </svg>
+
+                <span className="hidden sm:inline">
+                  {hasRole("driver")
+                    ? "KivoDriver"
+                    : "Become a Driver"}
+                </span>
+              </button>
 
               {hasRole("host") && (
                 <button

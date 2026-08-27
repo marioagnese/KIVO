@@ -188,7 +188,10 @@ export default function AccountModal({
               password
             );
 
-      await addAccountType(role);
+      await addAccountType(
+        role,
+        credential.user
+      );
 
       onClose();
     } catch (

@@ -43,7 +43,8 @@ type AuthContextValue = {
   ) => boolean;
 
   addAccountType: (
-    role: KivoAccountRole
+    role: KivoAccountRole,
+    targetUser?: User
   ) => Promise<void>;
 
   firebaseReady: boolean;
@@ -193,41 +194,61 @@ export function AuthProvider({
   }
 
   async function addAccountType(
-    role: KivoAccountRole
+    role: KivoAccountRole,
+    targetUser?: User
   ) {
+    const activeUser =
+      targetUser ?? user;
+
     if (
-      !user ||
+      !activeUser ||
       !db
     ) {
       return;
     }
 
-    const updated =
-      accountTypes.includes(
-        role
-      )
-        ? accountTypes
-        : [
-            ...accountTypes,
-            role,
-          ];
-
     const ref =
       doc(
         db,
         "users",
-        user.uid
+        activeUser.uid
       );
+
+    const snapshot =
+      await getDoc(ref);
+
+    const existingRoles =
+      snapshot.exists()
+        ? sanitizeRoles(
+            snapshot.data()?.roles
+          )
+        : [];
+
+    const updated =
+      existingRoles.includes(role)
+        ? existingRoles
+        : [
+            ...existingRoles,
+            role,
+          ];
 
     await setDoc(
       ref,
       {
         email:
-          user.email || "",
+          activeUser.email || "",
         roles:
           updated,
         updatedAt:
           serverTimestamp(),
+        ...(
+          snapshot.exists()
+            ? {}
+            : {
+                createdAt:
+                  serverTimestamp(),
+              }
+        ),
       },
       {
         merge: true,
@@ -241,11 +262,11 @@ export function AuthProvider({
     // Clean up old browser-only role keys
     // from the prototype phase.
     localStorage.removeItem(
-      `kivo-role:${user.uid}`
+      `kivo-role:${activeUser.uid}`
     );
 
     localStorage.removeItem(
-      `kivo-roles:${user.uid}`
+      `kivo-roles:${activeUser.uid}`
     );
   }
 
