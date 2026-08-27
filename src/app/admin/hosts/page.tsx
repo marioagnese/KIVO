@@ -46,6 +46,9 @@ export default function AdminHostsPage() {
   const [authReady, setAuthReady] = useState(false);
   const [leads, setLeads] = useState<FoundingHostLead[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
+
+  const [activeHostEmails, setActiveHostEmails] =
+    useState<Set<string>>(new Set());
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -127,6 +130,50 @@ export default function AdminHostsPage() {
     );
 
     return unsubscribe;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || !db) {
+      return;
+    }
+
+    return onSnapshot(
+      collection(db, "hostOnboarding"),
+      (snapshot) => {
+        const next =
+          new Set<string>();
+
+        for (const recordDoc of snapshot.docs) {
+          const data =
+            recordDoc.data();
+
+          if (
+            String(
+              data.activationStatus ?? ""
+            ) !== "active"
+          ) {
+            continue;
+          }
+
+          const email =
+            String(data.email ?? "")
+              .trim()
+              .toLowerCase();
+
+          if (email) {
+            next.add(email);
+          }
+        }
+
+        setActiveHostEmails(next);
+      },
+      (err) => {
+        console.error(
+          "Unable to load active Host lifecycle status:",
+          err
+        );
+      }
+    );
   }, [user]);
 
   async function qualifyLead(leadId: string) {
@@ -302,9 +349,27 @@ export default function AdminHostsPage() {
 
                 <tbody className="divide-y divide-white/[0.07]">
                   {leads.map((lead) => {
-                    const isNew = lead.status === "new";
-                    const isQualified = lead.status === "qualified";
-                    const isUpdating = updatingId === lead.id;
+                    const isActiveHost =
+                      activeHostEmails.has(
+                        lead.email
+                          .trim()
+                          .toLowerCase()
+                      );
+
+                    const displayStatus =
+                      isActiveHost
+                        ? "active"
+                        : lead.status;
+
+                    const isNew =
+                      displayStatus === "new";
+
+                    const isQualified =
+                      displayStatus ===
+                      "qualified";
+
+                    const isUpdating =
+                      updatingId === lead.id;
 
                     return (
                       <tr
@@ -353,7 +418,7 @@ export default function AdminHostsPage() {
                                 : "border border-emerald-300/20 bg-emerald-300/10 text-emerald-200"
                             }`}
                           >
-                            {lead.status.replaceAll("_", " ")}
+                            {displayStatus.replaceAll("_", " ")}
                           </span>
                         </td>
 
