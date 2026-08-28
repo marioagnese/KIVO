@@ -28,14 +28,11 @@ export async function POST(request: Request) {
     const decoded =
       await adminAuth.verifyIdToken(token);
 
-    if (
-      !decoded.email ||
-      decoded.email_verified !== true
-    ) {
+    if (!decoded.email) {
       return NextResponse.json(
         {
           error:
-            "A verified KIVO account email is required.",
+            "A KIVO account email is required.",
         },
         { status: 401 }
       );
