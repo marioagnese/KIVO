@@ -16,6 +16,7 @@ import {
 import { auth, db } from "@/lib/firebase";
 import OnboardingReviewQueue from "./OnboardingReviewQueue";
 import ActivationReadinessQueue from "./ActivationReadinessQueue";
+import DriverVerificationQueue from "./DriverVerificationQueue";
 
 const ADMIN_EMAIL = "admin@kivocharge.com";
 
@@ -307,6 +308,8 @@ export default function AdminHostsPage() {
         <OnboardingReviewQueue />
 
         <ActivationReadinessQueue />
+
+        <DriverVerificationQueue />
 
         <div className="mb-5 flex items-center justify-between">
           <div>
