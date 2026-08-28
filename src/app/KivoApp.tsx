@@ -2454,26 +2454,46 @@ export default function Home() {
     requestId: string,
     status: "accepted" | "declined" | "completed"
   ) {
-    if (!db || !user) {
+    if (!user) {
+      return;
+    }
+
+    if (status === "completed") {
       return;
     }
 
     try {
-      const requestRef =
-        doc(
-          db,
-          "bookingRequests",
-          requestId
+      const idToken =
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/bookings/update-status",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+            body:
+              JSON.stringify({
+                requestId,
+                status,
+              }),
+          }
         );
 
-      await updateDoc(
-        requestRef,
-        {
-          status,
-          updatedAt:
-            serverTimestamp(),
-        }
-      );
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+          "Could not update request."
+        );
+      }
 
       setHostRequests(
         (current) =>
@@ -2525,7 +2545,7 @@ export default function Home() {
   async function saveArrivalDetails(
     request: BookingRequest
   ) {
-    if (!db || !user) return;
+    if (!user) return;
 
     const draft =
       arrivalDrafts[request.id] ?? {
@@ -2559,21 +2579,39 @@ export default function Home() {
     setHostRequestsError("");
 
     try {
-      await updateDoc(
-        doc(
-          db,
-          "bookingRequests",
-          request.id
-        ),
-        {
-          privateAddress,
-          arrivalInstructions,
-          arrivalDetailsSharedAt:
-            serverTimestamp(),
-          updatedAt:
-            serverTimestamp(),
-        }
-      );
+      const idToken =
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/bookings/arrival-details",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+            body:
+              JSON.stringify({
+                requestId:
+                  request.id,
+                privateAddress,
+                arrivalInstructions,
+              }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+          "Could not save arrival details."
+        );
+      }
 
       setHostRequests((current) =>
         current.map((item) =>
@@ -2605,7 +2643,7 @@ export default function Home() {
   async function completeChargingSession(
     request: BookingRequest
   ) {
-    if (!db || !user) return;
+    if (!user) return;
 
     if (
       !request.privateAddress ||
@@ -2621,25 +2659,37 @@ export default function Home() {
     setHostRequestsError("");
 
     try {
-      await updateDoc(
-        doc(
-          db,
-          "bookingRequests",
-          request.id
-        ),
-        {
-          status: "completed",
-          completedAt:
-            serverTimestamp(),
-          updatedAt:
-            serverTimestamp(),
+      const idToken =
+        await user.getIdToken();
 
-          // Future payment architecture.
-          // No money moves yet.
-          settlementStatus:
-            "not_started",
-        }
-      );
+      const response =
+        await fetch(
+          "/api/bookings/complete",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+            body:
+              JSON.stringify({
+                requestId:
+                  request.id,
+              }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+          "Could not complete the charging session."
+        );
+      }
 
       setHostRequests((current) =>
         current.map((item) =>
@@ -2718,84 +2768,82 @@ export default function Home() {
     setBookingRequestLoading(true);
 
     try {
-      const ref = await addDoc(
-        collection(
-          db,
-          "bookingRequests"
-        ),
-        {
-          status:
-            "pending",
+      const idToken =
+        await user.getIdToken();
 
-          driverUid:
-            user.uid,
+      const response =
+        await fetch(
+          "/api/bookings/create",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+            body:
+              JSON.stringify({
+                hostListingId:
+                  selectedHost.firestoreId,
 
-          driverEmail:
-            user.email || "",
+                requestedTime:
+                  selectedTime,
 
-          hostUid:
-            selectedHost.ownerUid,
+                vehicleConnector,
 
-          hostListingId:
-            selectedHost.firestoreId,
+                hostArea:
+                  selectedHost.area,
 
-          hostArea:
-            selectedHost.area,
+                hostState:
+                  selectedHost.state,
 
-          hostState:
-            selectedHost.state,
+                price:
+                  selectedHost.price,
 
-          requestedTime:
-            selectedTime,
+                charger:
+                  selectedHost.charger,
 
-          vehicleConnector:
-            vehicleConnector,
+                speed:
+                  selectedHost.speed,
 
-          price:
-            selectedHost.price,
+                access:
+                  selectedHost.access,
 
-          currency:
-            "USD",
+                route: {
+                  from,
+                  fromRegion,
+                  to,
+                  toRegion,
 
-          charger:
-            selectedHost.charger,
+                  miles:
+                    routeInfo?.miles ?? null,
 
-          speed:
-            selectedHost.speed,
+                  hours:
+                    routeInfo?.hours ?? null,
+                },
+              }),
+          }
+        );
 
-          access:
-            selectedHost.access,
+      const data =
+        await response.json();
 
-          route: {
-            from:
-              from,
-
-            fromRegion:
-              fromRegion,
-
-            to:
-              to,
-
-            toRegion:
-              toRegion,
-
-            miles:
-              routeInfo?.miles ?? null,
-
-            hours:
-              routeInfo?.hours ?? null,
-          },
-
-          createdAt:
-            serverTimestamp(),
-
-          updatedAt:
-            serverTimestamp(),
+      if (!response.ok) {
+        if (data?.setupRequired) {
+          window.location.href =
+            "/driver/setup";
+          return;
         }
-      );
+
+        throw new Error(
+          data?.error ||
+          "Could not send the charging request."
+        );
+      }
 
       setBookingRequestId(
-        ref.id
+        data.bookingRequestId
       );
 
       setRequestSent(
