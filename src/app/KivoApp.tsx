@@ -3200,6 +3200,45 @@ export default function Home() {
 
               <button
                 type="button"
+                onClick={() => {
+                  window.location.href =
+                    "/driver";
+                }}
+                className="group inline-flex h-11 shrink-0 items-center justify-center gap-2.5 rounded-full border border-cyan-300/30 bg-cyan-400/[0.08] px-4 text-sm font-semibold text-white backdrop-blur-md transition hover:border-cyan-300/70 hover:bg-cyan-400/15 sm:h-auto sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-cyan-300"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M5 12.5 7 8h10l2 4.5"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 16v2.5M20 16v2.5"
+                  />
+                  <circle cx="7.5" cy="16" r="1.2" />
+                  <circle cx="16.5" cy="16" r="1.2" />
+                  <path
+                    strokeLinecap="round"
+                    d="M7.5 12h9"
+                  />
+                </svg>
+
+                <span className="hidden sm:inline">
+                  Become a Driver
+                </span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() =>
                   openAccountModal(
                     "driver",
