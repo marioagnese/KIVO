@@ -6,6 +6,11 @@ import {
   KIVO_ADMIN_EMAIL,
 } from "@/lib/firebaseAdmin";
 
+import {
+  kivoParagraph,
+  sendKivoEmail,
+} from "@/lib/kivoEmail";
+
 export async function POST(request: Request) {
   try {
     const authorization =
@@ -68,6 +73,14 @@ export async function POST(request: Request) {
     const activation =
       snapshot.data() ?? {};
 
+    const driverEmail =
+      String(
+        activation.email ??
+        ""
+      )
+        .trim()
+        .toLowerCase();
+
     if (
       activation.identitySafety?.status !==
       "pending_verification"
@@ -120,8 +133,94 @@ export async function POST(request: Request) {
       { merge: true }
     );
 
+    let readinessEmailSent = false;
+    let readinessEmailWarning = "";
+
+    if (
+      bookingReady &&
+      driverEmail
+    ) {
+      try {
+        const appUrl =
+          process.env.NEXT_PUBLIC_APP_URL;
+
+        if (!appUrl) {
+          throw new Error(
+            "KIVO application URL is not configured."
+          );
+        }
+
+        await sendKivoEmail({
+          to: driverEmail,
+          subject:
+            "You’re ready to drive with KIVO",
+          eyebrow:
+            "KIVODRIVER",
+          title:
+            "You’re ready to request charging sessions.",
+          body:
+            kivoParagraph(
+              "Your Driver profile, agreement, and Identity & Safety verification are complete."
+            ) +
+            kivoParagraph(
+              "You can now use KIVO to discover private neighborhood chargers and request real charging sessions from verified KIVO Hosts."
+            ) +
+            kivoParagraph(
+              "A Host’s exact private address and arrival instructions remain protected until your charging request has been accepted."
+            ),
+          buttonLabel:
+            "Find a KIVO charger",
+          buttonUrl:
+            appUrl.replace(/\/$/, ""),
+          accent:
+            "driver",
+        });
+
+        readinessEmailSent = true;
+
+        await ref.set(
+          {
+            communications: {
+              bookingReadyEmail: {
+                status: "sent",
+                sentAt: new Date(),
+              },
+            },
+          },
+          { merge: true }
+        );
+      } catch (emailError) {
+        console.error(
+          "KIVO Driver readiness email error:",
+          emailError
+        );
+
+        readinessEmailWarning =
+          emailError instanceof Error
+            ? emailError.message
+            : "Driver readiness email could not be sent.";
+
+        await ref.set(
+          {
+            communications: {
+              bookingReadyEmail: {
+                status: "failed",
+                attemptedAt: new Date(),
+                error:
+                  readinessEmailWarning,
+              },
+            },
+          },
+          { merge: true }
+        );
+      }
+    }
+
     return NextResponse.json({
       ok: true,
+
+      readinessEmailSent,
+      readinessEmailWarning,
 
       identitySafety: {
         status: "verified",
