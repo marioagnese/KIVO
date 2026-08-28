@@ -1829,10 +1829,19 @@ export default function Home() {
       //
       // This lets the demo show both highway-adjacent coverage and the
       // rural / last-mile use case where KIVO may be most differentiated.
-      const marketplaceHosts = [
-        ...allHosts,
-        ...realHosts,
-      ];
+      // Production discovery must represent the real KIVO
+      // marketplace only. Sample and simulated Hosts remain
+      // available locally for validation/demo coverage.
+      const validationMode =
+        process.env.NODE_ENV !== "production";
+
+      const marketplaceHosts =
+        validationMode
+          ? [
+              ...allHosts,
+              ...realHosts,
+            ]
+          : realHosts;
 
       const nearbyHosts =
         marketplaceHosts.filter((host) => {
@@ -1859,10 +1868,12 @@ export default function Home() {
       // This makes the validation prototype usable across the USA
       // and Canada without pretending these are live marketplace hosts.
       const simulatedRouteHosts =
-        buildSimulatedRouteHosts(
-          routeCoordinates,
-          route.distance / 1609.344
-        );
+        validationMode
+          ? buildSimulatedRouteHosts(
+              routeCoordinates,
+              route.distance / 1609.344
+            )
+          : [];
 
       // Give simulated pins real nearby city/town labels.
       // Example: a generated point near Sealy should display
@@ -5566,7 +5577,7 @@ export default function Home() {
           })()}
         </div>
 
-        {routeInfo && (
+        {routeInfo && process.env.NODE_ENV !== "production" && (
           <div className="mt-4 flex items-start gap-3 rounded-xl border border-white/[0.06] bg-slate-900/30 px-4 py-3">
 
             <svg
