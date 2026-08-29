@@ -225,9 +225,6 @@ export default function ProfileModal({
           email:
             user.email || "",
 
-          roles:
-            accountTypes,
-
           displayName:
             profile.displayName.trim(),
 

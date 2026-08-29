@@ -5,7 +5,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { useEffect, useRef, useState } from "react";
 import type { Feature, LineString } from "geojson";
 
-import AccountModal from "@/components/AccountModal";
 import ProfileModal from "@/components/ProfileModal";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
@@ -1028,7 +1027,16 @@ function getMapboxRegionCode(feature: any): string {
     : shortCode.toUpperCase();
 }
 
-export default function Home() {
+type KivoAppProps = {
+  experience?: "public" | "driver";
+};
+
+export default function Home({
+  experience = "public",
+}: KivoAppProps) {
+  const driverExperience =
+    experience === "driver";
+
   const {
     user,
     accountTypes,
@@ -1036,29 +1044,11 @@ export default function Home() {
     logout,
   } = useAuth();
 
-  const [accountModalOpen, setAccountModalOpen] =
-    useState(false);
-
-  const [accountModalRole, setAccountModalRole] =
-    useState<"driver" | "host">("driver");
-
-  const [accountModalMode, setAccountModalMode] =
-    useState<"signup" | "signin">("signup");
-
   const [profileModalOpen, setProfileModalOpen] =
     useState(false);
 
   const [accountHome, setAccountHome] =
     useState<"driver" | "host" | null>(null);
-
-  function openAccountModal(
-    role: "driver" | "host",
-    mode: "signup" | "signin" = "signup"
-  ) {
-    setAccountModalRole(role);
-    setAccountModalMode(mode);
-    setAccountModalOpen(true);
-  }
 
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -2739,12 +2729,14 @@ export default function Home() {
     // --------------------------------------------------------
 
     if (!user) {
-      openAccountModal("driver");
+      window.location.href =
+        "/driver/signup";
       return;
     }
 
     if (!hasRole("driver")) {
-      openAccountModal("driver");
+      window.location.href =
+        "/driver/setup";
       return;
     }
 
@@ -2885,12 +2877,14 @@ export default function Home() {
     setHostPublishError("");
 
     if (!user) {
-      openAccountModal("host");
+      window.location.href =
+        "/host";
       return;
     }
 
     if (!hasRole("host")) {
-      openAccountModal("host");
+      window.location.href =
+        "/host";
       return;
     }
 
@@ -3298,12 +3292,10 @@ export default function Home() {
 
               <button
                 type="button"
-                onClick={() =>
-                  openAccountModal(
-                    "driver",
-                    "signin"
-                  )
-                }
+                onClick={() => {
+                  window.location.href =
+                    "/login";
+                }}
                 className="group inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:border-white/60 hover:bg-white/[0.12] sm:px-5 sm:py-3.5 lg:px-6 lg:text-base"
               >
                 <svg
@@ -3422,15 +3414,6 @@ export default function Home() {
 
         </div>
       </header>
-
-      <AccountModal
-        open={accountModalOpen}
-        initialRole={accountModalRole}
-        initialMode={accountModalMode}
-        onClose={() =>
-          setAccountModalOpen(false)
-        }
-      />
 
       <ProfileModal
         open={profileModalOpen}

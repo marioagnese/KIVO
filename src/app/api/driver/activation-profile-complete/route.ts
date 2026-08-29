@@ -127,22 +127,6 @@ export async function POST(request: Request) {
           );
         }
 
-        const userData =
-          userSnapshot.data() ?? {};
-
-        const roles =
-          Array.isArray(
-            userData.roles
-          )
-            ? userData.roles
-            : [];
-
-        if (!roles.includes("driver")) {
-          throw new Error(
-            "KivoDriver access has not been added to this account."
-          );
-        }
-
         if (!activationSnapshot.exists) {
           throw new Error(
             "Driver activation record was not found."
@@ -168,13 +152,6 @@ export async function POST(request: Request) {
           userRef,
           {
             displayName,
-            location,
-
-            driverVehicle:
-              vehicle,
-
-            driverConnector:
-              connector,
 
             updatedAt:
               new Date(),
@@ -190,6 +167,11 @@ export async function POST(request: Request) {
             profile: {
               status:
                 "complete",
+
+              displayName,
+              location,
+              vehicle,
+              connector,
 
               completedAt:
                 new Date(),
@@ -253,19 +235,6 @@ export async function POST(request: Request) {
             message,
         },
         { status: 404 }
-      );
-    }
-
-    if (
-      message ===
-      "KivoDriver access has not been added to this account."
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            message,
-        },
-        { status: 403 }
       );
     }
 

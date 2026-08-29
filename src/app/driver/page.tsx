@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import AccountModal from "@/components/AccountModal";
 import { useAuth } from "@/context/AuthContext";
 
 export default function DriverLandingPage() {
@@ -15,16 +13,18 @@ export default function DriverLandingPage() {
     hasRole,
   } = useAuth();
 
-  const [accountModalOpen, setAccountModalOpen] =
-    useState(false);
-
   function continueAsDriver() {
     if (user && hasRole("driver")) {
+      router.push("/driver/home");
+      return;
+    }
+
+    if (user) {
       router.push("/driver/setup");
       return;
     }
 
-    setAccountModalOpen(true);
+    router.push("/driver/signup");
   }
 
   return (
@@ -118,7 +118,7 @@ export default function DriverLandingPage() {
 
               <span className="hidden sm:inline">
                 {user && hasRole("driver")
-                  ? "Continue as KivoDriver"
+                  ? "Open KivoDriver"
                   : "Become a KivoDriver"}
               </span>
 
@@ -207,7 +207,7 @@ export default function DriverLandingPage() {
               >
                 <span>
                   {user && hasRole("driver")
-                    ? "Continue Driver setup"
+                    ? "Open KivoDriver"
                     : "Become a KivoDriver"}
                 </span>
 
@@ -345,7 +345,7 @@ export default function DriverLandingPage() {
               className="mt-8 rounded-full bg-cyan-400 px-8 py-4 font-bold text-slate-950 transition hover:bg-cyan-300"
             >
               {user && hasRole("driver")
-                ? "Continue Driver setup"
+                ? "Open KivoDriver"
                 : "Create my KivoDriver account"}
               {" "}→
             </button>
@@ -354,15 +354,6 @@ export default function DriverLandingPage() {
         </div>
       </section>
 
-
-      <AccountModal
-        open={accountModalOpen}
-        onClose={() =>
-          setAccountModalOpen(false)
-        }
-        initialRole="driver"
-        initialMode="signup"
-      />
 
     </main>
   );
