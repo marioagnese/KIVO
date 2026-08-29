@@ -182,6 +182,11 @@ export async function POST(
         .collection("hostActivations")
         .doc(uid);
 
+    const userRef =
+      adminDb
+        .collection("users")
+        .doc(uid);
+
     const [
       onboardingSnapshot,
       activationSnapshot,
@@ -463,14 +468,47 @@ export async function POST(
     const result =
       await adminDb.runTransaction(
         async (transaction) => {
-          const latestActivationSnapshot =
-            await transaction.get(
+          const [
+            latestActivationSnapshot,
+            userSnapshot,
+          ] = await Promise.all([
+            transaction.get(
               activationRef
+            ),
+            transaction.get(
+              userRef
+            ),
+          ]);
+
+          if (!userSnapshot.exists) {
+            throw new Error(
+              "KIVO account profile was not found."
             );
+          }
 
           const latestActivation =
             latestActivationSnapshot.data() ??
             {};
+
+          const userData =
+            userSnapshot.data() ?? {};
+
+          const existingRoles =
+            Array.isArray(userData.roles)
+              ? userData.roles.filter(
+                  (role: unknown) =>
+                    role === "driver" ||
+                    role === "host"
+                )
+              : [];
+
+          const updatedRoles =
+            existingRoles.includes("host")
+              ? existingRoles
+              : [
+                  ...existingRoles,
+                  "host",
+                ];
 
           if (
             latestActivation.status ===
@@ -479,6 +517,20 @@ export async function POST(
               "string" &&
             latestActivation.hostListingId
           ) {
+            transaction.set(
+              userRef,
+              {
+                roles:
+                  updatedRoles,
+
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              },
+              {
+                merge: true,
+              }
+            );
+
             return {
               hostListingId:
                 latestActivation.hostListingId,
@@ -548,6 +600,20 @@ export async function POST(
                 FieldValue.serverTimestamp(),
             },
             { merge: true }
+          );
+
+          transaction.set(
+            userRef,
+            {
+              roles:
+                updatedRoles,
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            },
+            {
+              merge: true,
+            }
           );
 
           transaction.set(

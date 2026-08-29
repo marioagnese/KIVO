@@ -42,10 +42,9 @@ type AuthContextValue = {
     role: KivoAccountRole
   ) => boolean;
 
-  addAccountType: (
-    role: KivoAccountRole,
+  refreshAccountTypes: (
     targetUser?: User
-  ) => Promise<void>;
+  ) => Promise<KivoAccountRole[]>;
 
   firebaseReady: boolean;
 
@@ -193,81 +192,40 @@ export function AuthProvider({
     );
   }
 
-  async function addAccountType(
-    role: KivoAccountRole,
+  async function refreshAccountTypes(
     targetUser?: User
-  ) {
+  ): Promise<KivoAccountRole[]> {
     const activeUser =
       targetUser ?? user;
 
-    if (
-      !activeUser ||
-      !db
-    ) {
-      return;
+    if (!activeUser) {
+      setAccountTypes([]);
+      return [];
     }
 
-    const ref =
-      doc(
-        db,
-        "users",
-        activeUser.uid
+    try {
+      const roles =
+        await loadUserProfile(
+          activeUser
+        );
+
+      setAccountTypes(
+        roles
       );
 
-    const snapshot =
-      await getDoc(ref);
+      return roles;
+    } catch (error) {
+      console.error(
+        "Failed to refresh KIVO account roles:",
+        error
+      );
 
-    const existingRoles =
-      snapshot.exists()
-        ? sanitizeRoles(
-            snapshot.data()?.roles
-          )
-        : [];
+      setAccountTypes(
+        []
+      );
 
-    const updated =
-      existingRoles.includes(role)
-        ? existingRoles
-        : [
-            ...existingRoles,
-            role,
-          ];
-
-    await setDoc(
-      ref,
-      {
-        email:
-          activeUser.email || "",
-        roles:
-          updated,
-        updatedAt:
-          serverTimestamp(),
-        ...(
-          snapshot.exists()
-            ? {}
-            : {
-                createdAt:
-                  serverTimestamp(),
-              }
-        ),
-      },
-      {
-        merge: true,
-      }
-    );
-
-    setAccountTypes(
-      updated
-    );
-
-    // Clean up old browser-only role keys
-    // from the prototype phase.
-    localStorage.removeItem(
-      `kivo-role:${activeUser.uid}`
-    );
-
-    localStorage.removeItem(
-      `kivo-roles:${activeUser.uid}`
-    );
+      return [];
+    }
   }
 
   async function logout() {
@@ -291,7 +249,7 @@ export function AuthProvider({
         loading,
         accountTypes,
         hasRole,
-        addAccountType,
+        refreshAccountTypes,
         firebaseReady:
           isFirebaseConfigured,
         logout,

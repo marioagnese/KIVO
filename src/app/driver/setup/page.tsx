@@ -135,12 +135,12 @@ export default function DriverSetupPage() {
     }
 
     if (!user) {
-      router.replace("/");
+      router.replace("/login?next=/driver/setup");
       return;
     }
 
-    if (!hasRole("driver")) {
-      router.replace("/");
+    if (hasRole("driver")) {
+      router.replace("/driver/home");
       return;
     }
 

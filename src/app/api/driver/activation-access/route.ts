@@ -77,21 +77,6 @@ export async function POST(request: Request) {
     const userData =
       userSnapshot.data() ?? {};
 
-    const roles =
-      Array.isArray(userData.roles)
-        ? userData.roles
-        : [];
-
-    if (!roles.includes("driver")) {
-      return NextResponse.json(
-        {
-          error:
-            "KivoDriver access has not been added to this account.",
-        },
-        { status: 403 }
-      );
-    }
-
     let activation =
       activationSnapshot.exists
         ? activationSnapshot.data()
@@ -163,22 +148,27 @@ export async function POST(request: Request) {
 
         displayName:
           String(
-            userData.displayName ?? ""
+            activation.profile?.displayName ??
+              userData.displayName ??
+              ""
           ),
 
         location:
           String(
-            userData.location ?? ""
+            activation.profile?.location ??
+              ""
           ),
 
         vehicle:
           String(
-            userData.driverVehicle ?? ""
+            activation.profile?.vehicle ??
+              ""
           ),
 
         connector:
           String(
-            userData.driverConnector ?? ""
+            activation.profile?.connector ??
+              ""
           ),
       },
 

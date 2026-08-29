@@ -41,6 +41,12 @@ type DriverActivation = {
   bookingReadiness?: {
     status?: string;
   };
+
+  memberFinalization?: {
+    status?: string;
+    completedAt?: Timestamp | null;
+    completedBy?: string;
+  };
 };
 
 export default function DriverVerificationQueue() {
@@ -108,9 +114,26 @@ export default function DriverVerificationQueue() {
     useMemo(
       () =>
         drivers.filter(
-          (driver) =>
-            driver.identitySafety?.status ===
-            "pending_verification"
+          (driver) => {
+            const identityStatus =
+              driver.identitySafety?.status;
+
+            const needsIdentityVerification =
+              identityStatus ===
+              "pending_verification";
+
+            const needsMemberFinalization =
+              identityStatus === "verified" &&
+              driver.bookingReadiness?.status ===
+                "complete" &&
+              driver.memberFinalization?.status !==
+                "complete";
+
+            return (
+              needsIdentityVerification ||
+              needsMemberFinalization
+            );
+          }
         ),
       [drivers]
     );
@@ -128,11 +151,22 @@ export default function DriverVerificationQueue() {
     const adminUser =
       auth.currentUser;
 
+    const alreadyVerified =
+      driver.identitySafety?.status ===
+      "verified";
+
+    const confirmationMessage =
+      alreadyVerified
+        ? `Finalize KivoDriver membership for ${
+            driver.email || "this Driver"
+          }?\n\nIdentity is already verified. This will create the durable Driver profile and grant KivoDriver access to the existing KIVO account.`
+        : `Confirm TEST identity verification for ${
+            driver.email || "this Driver"
+          }?\n\nThis is only a temporary KIVO Admin bridge until the production identity provider is connected.`;
+
     if (
       !window.confirm(
-        `Confirm TEST identity verification for ${
-          driver.email || "this Driver"
-        }?\n\nThis is only a temporary KIVO Admin bridge until the production identity provider is connected.`
+        confirmationMessage
       )
     ) {
       return;
@@ -174,7 +208,9 @@ export default function DriverVerificationQueue() {
       }
 
       setMessage(
-        `${driver.email || "Driver"} test verification confirmed.`
+        alreadyVerified
+          ? `${driver.email || "Driver"} KivoDriver membership finalized.`
+          : `${driver.email || "Driver"} test verification confirmed and KivoDriver membership finalized.`
       );
     } catch (verifyError) {
       setError(
@@ -302,6 +338,9 @@ export default function DriverVerificationQueue() {
                       {verifyingUid ===
                       driver.uid
                         ? "Confirming..."
+                        : driver.identitySafety?.status ===
+                            "verified"
+                        ? "Finalize KivoDriver"
                         : "Confirm test verification"}
                     </button>
                   </div>

@@ -81,18 +81,24 @@ export async function POST(request: Request) {
         .trim()
         .toLowerCase();
 
+    const identityStatus =
+      activation.identitySafety?.status;
+
     if (
-      activation.identitySafety?.status !==
-      "pending_verification"
+      identityStatus !== "pending_verification" &&
+      identityStatus !== "verified"
     ) {
       return NextResponse.json(
         {
           error:
-            "Driver verification must be pending first.",
+            "Driver verification must be pending or already verified.",
         },
         { status: 400 }
       );
     }
+
+    const alreadyVerified =
+      identityStatus === "verified";
 
     const profileComplete =
       activation.profile?.status === "complete";
@@ -103,18 +109,30 @@ export async function POST(request: Request) {
     const bookingReady =
       profileComplete && legalComplete;
 
+    const userRef =
+      adminDb
+        .collection("users")
+        .doc(uid);
+
+    const driverRef =
+      adminDb
+        .collection("drivers")
+        .doc(uid);
+
     await ref.set(
       {
-        identitySafety: {
-          ...activation.identitySafety,
-          status: "verified",
-          provider:
-            "kivo_admin_test_bridge",
-          verificationSessionId:
-            "admin-test-verification",
-          verifiedAt: new Date(),
-          verifiedBy: adminEmail,
-        },
+        identitySafety: alreadyVerified
+          ? activation.identitySafety
+          : {
+              ...activation.identitySafety,
+              status: "verified",
+              provider:
+                "kivo_admin_test_bridge",
+              verificationSessionId:
+                "admin-test-verification",
+              verifiedAt: new Date(),
+              verifiedBy: adminEmail,
+            },
 
         bookingReadiness: {
           status:
@@ -133,12 +151,155 @@ export async function POST(request: Request) {
       { merge: true }
     );
 
+    if (bookingReady) {
+      await adminDb.runTransaction(
+        async (transaction) => {
+          const [
+            latestActivationSnapshot,
+            userSnapshot,
+          ] = await Promise.all([
+            transaction.get(ref),
+            transaction.get(userRef),
+          ]);
+
+          if (!userSnapshot.exists) {
+            throw new Error(
+              "KIVO account profile was not found."
+            );
+          }
+
+          const latestActivation =
+            latestActivationSnapshot.data() ?? {};
+
+          const profile =
+            latestActivation.profile ?? {};
+
+          const userData =
+            userSnapshot.data() ?? {};
+
+          const existingRoles =
+            Array.isArray(userData.roles)
+              ? userData.roles.filter(
+                  (role: unknown) =>
+                    role === "driver" ||
+                    role === "host"
+                )
+              : [];
+
+          const updatedRoles =
+            existingRoles.includes("driver")
+              ? existingRoles
+              : [
+                  ...existingRoles,
+                  "driver",
+                ];
+
+          transaction.set(
+            driverRef,
+            {
+              ownerUid: uid,
+
+              email:
+                driverEmail,
+
+              displayName:
+                String(
+                  profile.displayName ??
+                    userData.displayName ??
+                    ""
+                ),
+
+              homeArea:
+                String(
+                  profile.location ?? ""
+                ),
+
+              vehicle:
+                String(
+                  profile.vehicle ?? ""
+                ),
+
+              connector:
+                String(
+                  profile.connector ?? ""
+                ),
+
+              status: "active",
+
+              identitySafety: {
+                status: "verified",
+                provider:
+                  "kivo_admin_test_bridge",
+              },
+
+              bookingReady: true,
+
+              activatedAt:
+                new Date(),
+
+              updatedAt:
+                new Date(),
+            },
+            {
+              merge: true,
+            }
+          );
+
+          transaction.set(
+            userRef,
+            {
+              roles:
+                updatedRoles,
+
+              updatedAt:
+                new Date(),
+            },
+            {
+              merge: true,
+            }
+          );
+
+          /*
+           * Driver activation is not truly complete until
+           * BOTH the durable drivers/{uid} record and the
+           * shared account capability have been written.
+           *
+           * Keeping this marker on driverActivations gives
+           * Admin a safe recovery path if a previous
+           * deployment verified identity without completing
+           * member finalization.
+           */
+          transaction.set(
+            ref,
+            {
+              memberFinalization: {
+                status: "complete",
+                completedAt:
+                  new Date(),
+                completedBy:
+                  adminEmail,
+              },
+
+              updatedAt:
+                new Date(),
+            },
+            {
+              merge: true,
+            }
+          );
+        }
+      );
+    }
+
     let readinessEmailSent = false;
     let readinessEmailWarning = "";
 
     if (
       bookingReady &&
-      driverEmail
+      driverEmail &&
+      activation.communications
+        ?.bookingReadyEmail
+        ?.status !== "sent"
     ) {
       try {
         const appUrl =
