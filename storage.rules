@@ -37,6 +37,61 @@ service firebase.storage {
     }
 
 
+    // ========================================================
+    // KIVODRIVER MARKETPLACE PROFILE PHOTOS
+    //
+    // driverProfiles/{uid}/{fileName}
+    //
+    // Driver:
+    //   May upload/update only their own profile images.
+    //
+    // Signed-in KIVO members:
+    //   May read Driver marketplace profile images.
+    //
+    // This is separate from private Host onboarding photos.
+    // ========================================================
+
+    match /driverProfiles/{uid}/{fileName} {
+
+      allow read:
+        if request.auth != null;
+
+      allow write:
+        if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
+
+
+    // ========================================================
+    // KIVOHOST MARKETPLACE PROFILE PHOTOS
+    //
+    // hostProfiles/{uid}/{fileName}
+    //
+    // Host:
+    //   May upload/update only their own profile images.
+    //
+    // Signed-in KIVO members:
+    //   May read Host marketplace profile images.
+    //
+    // This is separate from private Host onboarding photos.
+    // ========================================================
+
+    match /hostProfiles/{uid}/{fileName} {
+
+      allow read:
+        if request.auth != null;
+
+      allow write:
+        if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
+
     // Everything else remains private.
     match /{allPaths=**} {
       allow read, write: if false;

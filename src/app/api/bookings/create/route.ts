@@ -173,26 +173,68 @@ export async function POST(request: Request) {
         ? Number(priceRaw)
         : 0;
 
+    /*
+     * Snapshot the public charger details onto the booking.
+     *
+     * hosts/{listingId}.charger is a structured object:
+     * {
+     *   level,
+     *   connector,
+     *   speed
+     * }
+     *
+     * Never String(host.charger) directly because that
+     * produces "[object Object]".
+     */
+    const hostCharger =
+      host.charger &&
+      typeof host.charger === "object"
+        ? host.charger as Record<
+            string,
+            unknown
+          >
+        : null;
+
+    const chargerParts =
+      hostCharger
+        ? [
+            hostCharger.level,
+            hostCharger.connector,
+          ]
+            .map((value) =>
+              String(
+                value ?? ""
+              ).trim()
+            )
+            .filter(Boolean)
+        : [];
+
     const charger =
-      String(
-        host.charger ??
-        body.charger ??
-        ""
-      );
+      chargerParts.length > 0
+        ? chargerParts.join(" · ")
+        : String(
+            typeof host.charger ===
+              "string"
+              ? host.charger
+              : body.charger ?? ""
+          ).trim();
 
     const speed =
       String(
-        host.speed ??
-        body.speed ??
-        ""
-      );
+        hostCharger?.speed ??
+          hostCharger?.power ??
+          host.speed ??
+          body.speed ??
+          ""
+      ).trim();
 
     const access =
       String(
-        host.access ??
-        body.access ??
-        ""
-      );
+        typeof host.access ===
+          "string"
+          ? host.access
+          : body.access ?? ""
+      ).trim();
 
     const ref =
       adminDb

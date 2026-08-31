@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 
@@ -11,8 +10,8 @@ import type {
 
 import {
   FormEvent,
+  Suspense,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -30,6 +29,8 @@ import {
 import {
   useAuth,
 } from "@/context/AuthContext";
+
+import KivoDriverShell from "@/components/driver/KivoDriverShell";
 
 import {
   db,
@@ -49,7 +50,7 @@ type RouteInfo = {
 };
 
 
-export default function DriverFindPage() {
+function DriverFindPageContent() {
   const router =
     useRouter();
 
@@ -60,7 +61,6 @@ export default function DriverFindPage() {
     user,
     loading: authLoading,
     hasRole,
-    accountTypes,
   } = useAuth();
 
 
@@ -90,41 +90,6 @@ export default function DriverFindPage() {
   /* =========================================================
      DRIVER
   ========================================================= */
-
-  const dualRole =
-    accountTypes.includes("host");
-
-  const driverName =
-    useMemo(() => {
-      if (!user) {
-        return "Driver";
-      }
-
-      if (
-        user.displayName?.trim()
-      ) {
-        return user.displayName
-          .trim()
-          .split(" ")[0];
-      }
-
-      const emailName =
-        user.email
-          ?.split("@")[0]
-          ?.split(/[._-]/)[0];
-
-      if (!emailName) {
-        return "Driver";
-      }
-
-      return (
-        emailName
-          .charAt(0)
-          .toUpperCase() +
-        emailName.slice(1)
-      );
-    }, [user]);
-
 
   /* =========================================================
      TRIP STATE
@@ -178,6 +143,38 @@ export default function DriverFindPage() {
     );
 
   const [
+    selectedTime,
+    setSelectedTime,
+  ] =
+    useState("6:00 PM");
+
+  const [
+    vehicleConnector,
+    setVehicleConnector,
+  ] =
+    useState("J1772");
+
+  const [
+    bookingRequestLoading,
+    setBookingRequestLoading,
+  ] =
+    useState(false);
+
+  const [
+    bookingRequestError,
+    setBookingRequestError,
+  ] =
+    useState("");
+
+  const [
+    bookingRequestId,
+    setBookingRequestId,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
     routeLoading,
     setRouteLoading,
   ] =
@@ -191,6 +188,11 @@ export default function DriverFindPage() {
 
   const [error, setError] =
     useState("");
+
+  const driverAuthorized =
+    !authLoading &&
+    !!user &&
+    hasRole("driver");
 
 
   /* =========================================================
@@ -219,6 +221,7 @@ export default function DriverFindPage() {
 
   useEffect(() => {
     if (
+      !driverAuthorized ||
       !mapContainer.current ||
       mapRef.current
     ) {
@@ -260,9 +263,32 @@ export default function DriverFindPage() {
       "top-right"
     );
 
+    const resizeMap = () => {
+      map.resize();
+    };
+
+    const resizeObserver =
+      new ResizeObserver(() => {
+        resizeMap();
+      });
+
+    resizeObserver.observe(
+      mapContainer.current
+    );
+
     map.on(
       "load",
       () => {
+        map.resize();
+
+        requestAnimationFrame(() => {
+          map.resize();
+        });
+
+        setTimeout(() => {
+          map.resize();
+        }, 150);
+
         setMapReady(true);
       }
     );
@@ -277,7 +303,12 @@ export default function DriverFindPage() {
     mapRef.current =
       map;
 
+    requestAnimationFrame(() => {
+      map.resize();
+    });
+
     return () => {
+      resizeObserver.disconnect();
       markerRefs.current.forEach(
         (marker) =>
           marker.remove()
@@ -293,7 +324,7 @@ export default function DriverFindPage() {
       mapRef.current =
         null;
     };
-  }, []);
+  }, [driverAuthorized]);
 
 
   /* =========================================================
@@ -1060,84 +1091,116 @@ export default function DriverFindPage() {
      UI
   ========================================================= */
 
+
+  async function requestChargingSession(
+    host: MarketplaceHost
+  ) {
+    if (!user || !host.firestoreId) {
+      setBookingRequestError(
+        "This Host cannot receive booking requests right now."
+      );
+      return;
+    }
+
+    setBookingRequestLoading(true);
+    setBookingRequestError("");
+    setBookingRequestId(null);
+
+    try {
+      const idToken =
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/bookings/create",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              hostListingId:
+                host.firestoreId,
+
+              requestedTime:
+                selectedTime,
+
+              vehicleConnector,
+
+              hostArea:
+                host.area,
+
+              hostState:
+                host.state,
+
+              price:
+                host.price,
+
+              charger:
+                host.charger,
+
+              speed:
+                host.speed,
+
+              access:
+                host.access,
+
+              route: {
+                from,
+                to,
+                miles:
+                  routeInfo?.miles ??
+                  null,
+                hours:
+                  routeInfo?.hours ??
+                  null,
+              },
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        if (data?.setupRequired) {
+          router.push(
+            "/driver/setup"
+          );
+          return;
+        }
+
+        throw new Error(
+          data?.error ||
+            "Could not send the charging request."
+        );
+      }
+
+      setBookingRequestId(
+        String(
+          data.bookingRequestId ||
+            ""
+        )
+      );
+    } catch (err) {
+      setBookingRequestError(
+        err instanceof Error
+          ? err.message
+          : "Could not send the charging request."
+      );
+    } finally {
+      setBookingRequestLoading(
+        false
+      );
+    }
+  }
+
+
   return (
-    <main className="min-h-screen bg-[#f5f7fa] text-slate-950">
-
-
-      {/* HEADER */}
-
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-
-        <div className="mx-auto flex max-w-[1500px] items-center justify-between gap-5 px-5 py-4 sm:px-7">
-
-          <Link
-            href="/driver/home"
-            className="flex items-center gap-3"
-          >
-
-            <img
-              src="/kivo/kivo-wordmark.png"
-              alt="KIVO"
-              className="h-10 w-auto"
-            />
-
-            <div className="border-l border-slate-200 pl-3">
-
-              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-700">
-                KivoDriver
-              </p>
-
-            </div>
-
-          </Link>
-
-
-          <nav className="hidden items-center gap-2 md:flex">
-
-            <Link
-              href="/driver/home"
-              className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-950"
-            >
-              Home
-            </Link>
-
-            <span className="rounded-xl bg-cyan-50 px-4 py-2 text-sm font-black text-cyan-700">
-              Find
-            </span>
-
-            <span className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-400">
-              Trips
-            </span>
-
-          </nav>
-
-
-          <div className="flex items-center gap-3">
-
-            {dualRole && (
-              <Link
-                href="/host/home"
-                className="hidden rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 lg:block"
-              >
-                Switch to KivoHost
-              </Link>
-            )}
-
-            <Link
-              href="/account"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-950 text-sm font-black text-white"
-            >
-              {driverName
-                .slice(0, 1)
-                .toUpperCase()}
-            </Link>
-
-          </div>
-
-        </div>
-
-      </header>
-
+    <KivoDriverShell active="find">
 
       {/* TRIP SEARCH */}
 
@@ -1279,13 +1342,13 @@ export default function DriverFindPage() {
 
           {/* MAP */}
 
-          <div className="relative min-h-[500px] border-b border-slate-200 lg:min-h-[650px] lg:border-b-0 lg:border-r">
+          <div className="relative h-[500px] border-b border-slate-200 lg:h-[650px] lg:border-b-0 lg:border-r">
 
             <div
               ref={
                 mapContainer
               }
-              className="absolute inset-0"
+              className="h-full w-full"
             />
 
 
@@ -1381,12 +1444,13 @@ export default function DriverFindPage() {
                     host.id;
 
                   return (
-                    <button
+                    <div
                       key={
                         host.firestoreId ||
                         host.id
                       }
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         setSelectedHostId(
                           host.id
@@ -1403,7 +1467,30 @@ export default function DriverFindPage() {
                               600,
                           });
                       }}
-                      className={`w-full rounded-2xl border p-5 text-left transition ${
+                      onKeyDown={(event) => {
+                        if (
+                          event.key === "Enter" ||
+                          event.key === " "
+                        ) {
+                          event.preventDefault();
+
+                          setSelectedHostId(
+                            host.id
+                          );
+
+                          mapRef.current
+                            ?.flyTo({
+                              center:
+                                host.coords,
+
+                              zoom: 11,
+
+                              duration:
+                                600,
+                            });
+                        }
+                      }}
+                      className={`w-full cursor-pointer rounded-2xl border p-5 text-left transition ${
                         selected
                           ? "border-cyan-400 bg-cyan-50/60 shadow-sm"
                           : "border-slate-200 bg-white hover:border-cyan-300 hover:shadow-sm"
@@ -1427,9 +1514,6 @@ export default function DriverFindPage() {
 
                           <p className="mt-1 text-sm font-semibold text-slate-500">
                             {host.area}
-                            {host.state
-                              ? `, ${host.state}`
-                              : ""}
                           </p>
 
                         </div>
@@ -1480,10 +1564,10 @@ export default function DriverFindPage() {
                             Session
                           </p>
 
-                          <p className="mt-1 text-lg font-black text-slate-950">
+                          <p className="mt-1 text-sm font-black text-slate-950">
                             {host.price > 0
                               ? `$${host.price}`
-                              : "Price TBD"}
+                              : "Pricing not enabled"}
                           </p>
 
                         </div>
@@ -1491,30 +1575,189 @@ export default function DriverFindPage() {
                       </div>
 
 
-                      {selected &&
-                        host.amenities.length >
-                          0 && (
-                          <div className="mt-4 flex flex-wrap gap-2 border-t border-cyan-100 pt-4">
+                      {selected && (
+                        <div
+                          className="mt-5 border-t border-cyan-100 pt-5"
+                          onClick={(event) =>
+                            event.stopPropagation()
+                          }
+                        >
 
-                            {host.amenities.map(
-                              (
-                                amenity
-                              ) => (
-                                <span
-                                  key={
-                                    amenity
-                                  }
-                                  className="rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs font-semibold text-cyan-800"
-                                >
-                                  {amenity}
+                          {host.amenities.length >
+                            0 && (
+                            <div className="flex flex-wrap gap-2">
+
+                              {host.amenities.map(
+                                (
+                                  amenity
+                                ) => (
+                                  <span
+                                    key={
+                                      amenity
+                                    }
+                                    className="rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs font-semibold text-cyan-800"
+                                  >
+                                    {amenity}
+                                  </span>
+                                )
+                              )}
+
+                            </div>
+                          )}
+
+
+                          <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+
+                            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                              Request this charger
+                            </p>
+
+                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                              Choose your expected arrival time and confirm your vehicle connector.
+                            </p>
+
+
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+
+                              <label className="block">
+
+                                <span className="text-xs font-bold text-slate-500">
+                                  Expected arrival
                                 </span>
-                              )
+
+                                <select
+                                  value={
+                                    selectedTime
+                                  }
+                                  onChange={(
+                                    event
+                                  ) =>
+                                    setSelectedTime(
+                                      event
+                                        .target
+                                        .value
+                                    )
+                                  }
+                                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-cyan-400"
+                                >
+                                  <option>
+                                    4:00 PM
+                                  </option>
+                                  <option>
+                                    5:00 PM
+                                  </option>
+                                  <option>
+                                    6:00 PM
+                                  </option>
+                                  <option>
+                                    7:00 PM
+                                  </option>
+                                  <option>
+                                    8:00 PM
+                                  </option>
+                                </select>
+
+                              </label>
+
+
+                              <label className="block">
+
+                                <span className="text-xs font-bold text-slate-500">
+                                  Vehicle connector
+                                </span>
+
+                                <select
+                                  value={
+                                    vehicleConnector
+                                  }
+                                  onChange={(
+                                    event
+                                  ) =>
+                                    setVehicleConnector(
+                                      event
+                                        .target
+                                        .value
+                                    )
+                                  }
+                                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-cyan-400"
+                                >
+                                  <option>
+                                    J1772
+                                  </option>
+                                  <option>
+                                    NACS / Tesla
+                                  </option>
+                                  <option>
+                                    CCS1
+                                  </option>
+                                </select>
+
+                              </label>
+
+                            </div>
+
+
+                            <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3">
+
+                              <p className="text-xs font-bold text-slate-400">
+                                Location privacy
+                              </p>
+
+                              <p className="mt-1 text-xs leading-5 text-slate-500">
+                                Exact property address and arrival instructions are shared only after the Host accepts your request.
+                              </p>
+
+                            </div>
+
+
+                            {bookingRequestError && (
+                              <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                                {
+                                  bookingRequestError
+                                }
+                              </p>
+                            )}
+
+
+                            {bookingRequestId ? (
+                              <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4">
+
+                                <p className="font-black text-emerald-800">
+                                  Request sent
+                                </p>
+
+                                <p className="mt-1 text-sm leading-6 text-emerald-700">
+                                  Waiting for {
+                                    host.hostName
+                                  } to respond.
+                                </p>
+
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                disabled={
+                                  bookingRequestLoading
+                                }
+                                onClick={() =>
+                                  requestChargingSession(
+                                    host
+                                  )
+                                }
+                                className="mt-4 w-full rounded-xl bg-cyan-500 px-5 py-3.5 text-sm font-black text-white transition hover:bg-cyan-600 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                {bookingRequestLoading
+                                  ? "Sending request..."
+                                  : "Request to Charge"}
+                              </button>
                             )}
 
                           </div>
-                        )}
 
-                    </button>
+                        </div>
+                      )}
+
+                    </div>
                   );
                 }
               )}
@@ -1528,34 +1771,23 @@ export default function DriverFindPage() {
       </section>
 
 
-      {/* MOBILE NAV */}
+    </KivoDriverShell>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 px-3 py-2 backdrop-blur-xl md:hidden">
+  );
+}
 
-        <div className="mx-auto grid max-w-md grid-cols-3">
-
-          <Link
-            href="/driver/home"
-            className="px-3 py-2 text-center text-xs font-bold text-slate-400"
-          >
-            Home
-          </Link>
-
-          <span className="rounded-xl bg-cyan-50 px-3 py-2 text-center text-xs font-black text-cyan-700">
-            Find
-          </span>
-
-          <Link
-            href="/account"
-            className="px-3 py-2 text-center text-xs font-bold text-slate-400"
-          >
-            Profile
-          </Link>
-
-        </div>
-
-      </nav>
-
-    </main>
+export default function DriverFindPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#f5f7fa]">
+          <p className="text-sm font-bold text-slate-500">
+            Loading KivoDriver...
+          </p>
+        </main>
+      }
+    >
+      <DriverFindPageContent />
+    </Suspense>
   );
 }
