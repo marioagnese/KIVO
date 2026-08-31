@@ -187,6 +187,11 @@ export async function POST(
         .collection("users")
         .doc(uid);
 
+    const hostProfileRef =
+      adminDb
+        .collection("hostProfiles")
+        .doc(uid);
+
     const [
       onboardingSnapshot,
       activationSnapshot,
@@ -531,6 +536,50 @@ export async function POST(
               }
             );
 
+            /*
+             * Durable Host-person profile.
+             *
+             * This is intentionally separate from:
+             *
+             * - users/{uid}: account + roles
+             * - hosts/{listingId}: charger/property marketplace listing
+             * - hostActivations/{uid}: private activation record
+             * - hostOnboarding/{uid}: private onboarding evidence
+             *
+             * merge:true also lets this branch safely backfill profiles
+             * for Hosts activated before hostProfiles existed.
+             */
+            transaction.set(
+              hostProfileRef,
+              {
+                ownerUid: uid,
+
+                displayName:
+                  displayName,
+
+                publicAlias:
+                  displayName,
+
+                identitySafety: {
+                  status:
+                    String(
+                      latestActivation
+                        .identitySafety
+                        ?.status ??
+                        "verified"
+                    ),
+                },
+
+                status: "active",
+
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              },
+              {
+                merge: true,
+              }
+            );
+
             return {
               hostListingId:
                 latestActivation.hostListingId,
@@ -607,6 +656,49 @@ export async function POST(
             {
               roles:
                 updatedRoles,
+
+              updatedAt:
+                FieldValue.serverTimestamp(),
+            },
+            {
+              merge: true,
+            }
+          );
+
+          /*
+           * Create the durable Host-person profile at the same
+           * lifecycle boundary that grants the Host role and
+           * publishes the marketplace listing.
+           */
+          transaction.set(
+            hostProfileRef,
+            {
+              ownerUid: uid,
+
+              displayName:
+                displayName,
+
+              publicAlias:
+                displayName,
+
+              bio: "",
+
+              photoPath: "",
+
+              identitySafety: {
+                status:
+                  String(
+                    latestActivation
+                      .identitySafety
+                      ?.status ??
+                      "verified"
+                  ),
+              },
+
+              status: "active",
+
+              activatedAt:
+                FieldValue.serverTimestamp(),
 
               updatedAt:
                 FieldValue.serverTimestamp(),

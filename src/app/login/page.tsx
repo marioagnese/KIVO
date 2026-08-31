@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import {
+  Suspense,
+  useState,
+} from "react";
 import {
   useRouter,
   useSearchParams,
@@ -43,7 +46,7 @@ function destinationForRoles(
   return "/account";
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router =
     useRouter();
 
@@ -282,5 +285,21 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-[#f5f7fa]">
+          <p className="text-sm font-bold text-slate-500">
+            Loading KIVO...
+          </p>
+        </main>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
