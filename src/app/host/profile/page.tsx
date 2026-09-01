@@ -95,6 +95,29 @@ export default function HostProfilePage() {
     useState("");
 
   const [
+    payoutLoading,
+    setPayoutLoading,
+  ] =
+    useState(false);
+
+  const [
+    payoutError,
+    setPayoutError,
+  ] =
+    useState("");
+
+  const [
+    payoutStatus,
+    setPayoutStatus,
+  ] =
+    useState<
+      "loading" |
+      "not_started" |
+      "incomplete" |
+      "ready"
+    >("loading");
+
+  const [
     publicAlias,
     setPublicAlias,
   ] =
@@ -256,6 +279,8 @@ export default function HostProfilePage() {
       } else {
         setPhotoUrl("");
       }
+
+      await loadPayoutStatus(token);
     } catch (err) {
       setError(
         err instanceof Error
@@ -463,6 +488,132 @@ export default function HostProfilePage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+
+  /* =========================================================
+     STRIPE CONNECT PAYOUT STATUS
+  ========================================================= */
+
+  async function loadPayoutStatus(
+    token?: string
+  ) {
+    if (!user) {
+      return;
+    }
+
+    setPayoutError("");
+
+    try {
+      const idToken =
+        token ??
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/stripe/connect/status",
+          {
+            headers: {
+              authorization:
+                `Bearer ${idToken}`,
+            },
+          }
+        );
+
+      const payload =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          "Could not check payout status."
+        );
+      }
+
+      if (
+        payload?.status === "ready"
+      ) {
+        setPayoutStatus("ready");
+      } else if (
+        payload?.status ===
+        "not_started"
+      ) {
+        setPayoutStatus(
+          "not_started"
+        );
+      } else {
+        setPayoutStatus(
+          "incomplete"
+        );
+      }
+    } catch (err) {
+      setPayoutStatus(
+        "incomplete"
+      );
+
+      setPayoutError(
+        err instanceof Error
+          ? err.message
+          : "Could not check payout status."
+      );
+    }
+  }
+
+
+  /* =========================================================
+     STRIPE CONNECT PAYOUT SETUP
+  ========================================================= */
+
+  async function startPayoutSetup() {
+    if (!user) {
+      return;
+    }
+
+    setPayoutLoading(true);
+    setPayoutError("");
+
+    try {
+      const token =
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/stripe/connect/onboard",
+          {
+            method: "POST",
+
+            headers: {
+              authorization:
+                `Bearer ${token}`,
+            },
+          }
+        );
+
+      const payload =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !payload?.onboardingUrl
+      ) {
+        throw new Error(
+          payload?.error ||
+          "Could not start payout setup."
+        );
+      }
+
+      window.location.assign(
+        payload.onboardingUrl
+      );
+    } catch (err) {
+      setPayoutError(
+        err instanceof Error
+          ? err.message
+          : "Could not start payout setup."
+      );
+
+      setPayoutLoading(false);
     }
   }
 
@@ -792,6 +943,67 @@ export default function HostProfilePage() {
                     </p>
 
                   </div>
+
+                </section>
+
+
+                <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                    Host payouts
+                  </p>
+
+                  <h2 className="mt-2 text-xl font-black text-slate-950">
+                    {payoutStatus === "ready"
+                      ? "Payouts ready"
+                      : "Get paid through KIVO"}
+                  </h2>
+
+                  <p className="mt-2 text-xs leading-5 text-slate-500">
+                    {payoutStatus === "ready"
+                      ? "Your Stripe payout account is connected and ready to receive KIVO Host earnings."
+                      : payoutStatus === "incomplete"
+                        ? "Your Stripe payout setup has started but still needs to be completed."
+                        : payoutStatus === "loading"
+                          ? "Checking your Stripe payout status..."
+                          : "Set up your payout account securely with Stripe. Your banking information is handled by Stripe and is not stored by KIVO."}
+                  </p>
+
+                  {payoutStatus === "ready" ? (
+                    <div className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800">
+                      ✓ Stripe payouts enabled
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={
+                        payoutLoading ||
+                        payoutStatus ===
+                          "loading"
+                      }
+                      onClick={() =>
+                        void startPayoutSetup()
+                      }
+                      className="mt-5 w-full rounded-xl bg-emerald-600 px-5 py-3.5 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {payoutLoading
+                        ? "Opening Stripe..."
+                        : payoutStatus ===
+                            "incomplete"
+                          ? "Continue payout setup"
+                          : "Set up payouts"}
+                    </button>
+                  )}
+
+                  {payoutError && (
+                    <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs font-bold leading-5 text-rose-700">
+                      {payoutError}
+                    </div>
+                  )}
+
+                  <p className="mt-4 text-[11px] leading-5 text-slate-400">
+                    Stripe securely handles identity, bank account and payout information.
+                  </p>
 
                 </section>
 
