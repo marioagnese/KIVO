@@ -164,6 +164,22 @@ export async function POST(
     }
 
 
+    if (
+      booking.paymentStatus !==
+      "paid"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Driver payment must be completed before private arrival details can be shared.",
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
+
     /*
      * The exact charging address is private
      * Host activation data.

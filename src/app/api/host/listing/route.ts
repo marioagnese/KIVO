@@ -399,6 +399,18 @@ export async function PATCH(
         body.rules ?? ""
       ).trim();
 
+    /*
+     * Flat Host-controlled price for one
+     * approved KIVO charging session.
+     *
+     * Payment readiness remains a separate
+     * KIVO-controlled state.
+     */
+    const sessionPrice =
+      Number(
+        body.sessionPrice
+      );
+
     const requestedAvailability =
       Array.isArray(
         body.availability
@@ -544,6 +556,41 @@ export async function PATCH(
     }
 
     if (
+      !Number.isFinite(
+        sessionPrice
+      ) ||
+      sessionPrice <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Enter a valid session price greater than $0.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      sessionPrice > 500
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Session price cannot exceed $500.",
+        },
+        { status: 400 }
+      );
+    }
+
+    /*
+     * Store money at two-decimal precision.
+     */
+    const normalizedSessionPrice =
+      Math.round(
+        sessionPrice * 100
+      ) / 100;
+
+    if (
       availability.length ===
       0
     ) {
@@ -569,6 +616,17 @@ export async function PATCH(
         },
 
         rules,
+
+        pricing: {
+          sessionPrice:
+            normalizedSessionPrice,
+
+          currency:
+            "USD",
+
+          configured:
+            true,
+        },
 
         updatedAt:
           FieldValue.serverTimestamp(),

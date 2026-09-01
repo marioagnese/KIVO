@@ -90,6 +90,16 @@ export async function POST(request: Request) {
       {
         status,
 
+        ...(status === "accepted"
+          ? {
+              paymentStatus:
+                "required",
+
+              paymentRequiredAt:
+                FieldValue.serverTimestamp(),
+            }
+          : {}),
+
         updatedAt:
           FieldValue.serverTimestamp(),
 
@@ -132,10 +142,13 @@ export async function POST(request: Request) {
                     `Your charging request for ${booking.requestedTime || "the selected time"} has been accepted.`
                   ) +
                   kivoParagraph(
-                    "Your Host can now provide the private charging address and arrival instructions securely through KIVO."
+                    "Payment is now required to confirm your charging session."
                   ) +
                   kivoParagraph(
-                    "Open KIVO for your booking status and arrival information."
+                    "Once KIVO confirms your payment, your Host can securely provide the private charging address and arrival instructions."
+                  ) +
+                  kivoParagraph(
+                    "Open KIVO to complete payment and view your booking."
                   )
                 : kivoParagraph(
                     `The Host was unable to accept your charging request for ${booking.requestedTime || "the selected time"}.`

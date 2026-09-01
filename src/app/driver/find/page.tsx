@@ -946,6 +946,20 @@ function DriverFindPageContent() {
         }
       );
 
+      /*
+       * A KIVO Host can intentionally be several miles
+       * away from the route itself. Include discovered
+       * Hosts in the viewport so widened-corridor Hosts
+       * do not exist outside the visible map.
+       */
+      rankedHosts.forEach(
+        (host) => {
+          bounds.extend(
+            host.coords
+          );
+        }
+      );
+
       map.fitBounds(
         bounds,
         {
@@ -1155,9 +1169,6 @@ function DriverFindPageContent() {
 
               hostState:
                 host.state,
-
-              price:
-                host.price,
 
               charger:
                 host.charger,
@@ -1775,7 +1786,7 @@ function DriverFindPageContent() {
                               </p>
 
                               <p className="mt-1 text-xs leading-5 text-slate-500">
-                                Exact property address and arrival instructions are shared only after the Host accepts your request.
+                                Exact property address and arrival instructions are shared only after the Host accepts your request and payment is confirmed.
                               </p>
 
                             </div>
