@@ -329,6 +329,17 @@ export async function POST(
           mode:
             "payment",
 
+          /*
+           * KIVO MVP intentionally uses card-only Checkout.
+           *
+           * This keeps payment confirmation synchronous and
+           * avoids unlocking private Host details while an
+           * asynchronous payment method is still pending.
+           */
+          payment_method_types: [
+            "card",
+          ],
+
           success_url:
             `${appUrl}/driver/trips?payment=success&session_id={CHECKOUT_SESSION_ID}`,
 
