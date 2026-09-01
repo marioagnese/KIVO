@@ -70,6 +70,12 @@ type HostBookingRequest = {
   price: number;
   currency: string;
 
+  paymentStatus:
+    | "not_started"
+    | "required"
+    | "paid"
+    | "failed";
+
   charger: string;
   speed: string;
   access: string;
@@ -361,6 +367,12 @@ export default function HostRequestsPage() {
                   currency:
                     data.currency ||
                     "USD",
+
+                  paymentStatus:
+                    String(
+                      data.paymentStatus ||
+                      "not_started"
+                    ) as HostBookingRequest["paymentStatus"],
 
                   charger:
                     normalizeCharger(
@@ -1252,6 +1264,31 @@ export default function HostRequestsPage() {
                   )}
 
                 {request.status === "accepted" &&
+                  request.paymentStatus === "required" &&
+                  !request.arrivalDetailsShared && (
+                    <div className="mt-6 border-t border-slate-100 pt-6">
+                      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5 sm:p-6">
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">
+                          Waiting for Driver payment
+                        </p>
+
+                        <h3 className="mt-1 text-lg font-black text-slate-950">
+                          Request accepted
+                        </h3>
+
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
+                          The Driver must complete payment before KIVO unlocks private arrival details. Your exact charging address remains protected until then.
+                        </p>
+
+                        <p className="mt-3 text-sm font-black text-slate-900">
+                          Session total: ${request.price.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                {request.status === "accepted" &&
+                  request.paymentStatus === "paid" &&
                   !request.arrivalDetailsShared && (
                     <div className="mt-6 border-t border-slate-100 pt-6">
 

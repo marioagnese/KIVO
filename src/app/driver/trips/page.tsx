@@ -48,6 +48,12 @@ type BookingRequest = {
   price: number;
   currency: string;
 
+  paymentStatus:
+    | "not_started"
+    | "required"
+    | "paid"
+    | "failed";
+
   privateAddress: string;
   arrivalInstructions: string;
 
@@ -219,14 +225,28 @@ function statusDesign(
 
 function BookingCard({
   booking,
+  onPay,
+  paymentLoading,
 }: {
   booking: BookingRequest;
+  onPay: (
+    bookingRequestId: string
+  ) => Promise<void>;
+  paymentLoading: boolean;
 }) {
   const design =
     statusDesign(booking.status);
 
+  const paymentRequired =
+    booking.status === "accepted" &&
+    booking.paymentStatus === "required";
+
+  const paymentPaid =
+    booking.paymentStatus === "paid";
+
   const arrivalReady =
     booking.status === "accepted" &&
+    paymentPaid &&
     Boolean(
       booking.privateAddress &&
       booking.arrivalInstructions
@@ -464,6 +484,68 @@ function BookingCard({
           </div>
         </div>
 
+
+        {paymentRequired && (
+          <div className="mt-6 rounded-3xl border border-cyan-200 bg-cyan-50 p-5 sm:p-6">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">
+              Payment required
+            </p>
+
+            <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-lg font-black text-slate-950">
+                  Your Host accepted the request
+                </h3>
+
+                <p className="mt-1 text-sm leading-6 text-slate-600">
+                  Complete payment to confirm this charging session. Your Host&apos;s private arrival details remain locked until payment is confirmed.
+                </p>
+              </div>
+
+              <div className="shrink-0 text-left sm:text-right">
+                <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">
+                  Session total
+                </p>
+
+                <p className="mt-1 text-2xl font-black text-slate-950">
+                  ${booking.price.toFixed(2)}
+                </p>
+
+                <button
+                  type="button"
+                  disabled={
+                    paymentLoading
+                  }
+                  onClick={() =>
+                    onPay(
+                      booking.id
+                    )
+                  }
+                  className="mt-3 rounded-xl bg-cyan-600 px-6 py-3 text-sm font-black text-white transition hover:bg-cyan-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {paymentLoading
+                    ? "Opening Stripe..."
+                    : "Pay now"}
+                </button>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {booking.status === "accepted" &&
+          paymentPaid &&
+          !arrivalReady && (
+            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+              <p className="font-black text-emerald-900">
+                ✓ Payment confirmed
+              </p>
+
+              <p className="mt-1 text-sm leading-6 text-emerald-800/80">
+                Your Host can now securely share the private charging address and arrival instructions.
+              </p>
+            </div>
+          )}
 
         {booking.status === "pending" && (
           <div
@@ -820,6 +902,11 @@ export default function DriverTripsPage() {
   const [error, setError] =
     useState("");
 
+  const [
+    paymentBookingId,
+    setPaymentBookingId,
+  ] = useState("");
+
 
   const driverAuthorized =
     !authLoading &&
@@ -927,6 +1014,13 @@ export default function DriverTripsPage() {
                     text(
                       data.currency
                     ) || "USD",
+
+                  paymentStatus:
+                    (
+                      text(
+                        data.paymentStatus
+                      ) || "not_started"
+                    ) as BookingRequest["paymentStatus"],
 
                   privateAddress:
                     text(
@@ -1054,6 +1148,87 @@ export default function DriverTripsPage() {
         ),
       [bookings]
     );
+
+
+  async function startCheckout(
+    bookingRequestId: string
+  ) {
+    if (!user) {
+      window.alert(
+        "Please sign in again to continue."
+      );
+      return;
+    }
+
+    try {
+      setPaymentBookingId(
+        bookingRequestId
+      );
+
+      const idToken =
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/stripe/checkout",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+
+            body: JSON.stringify({
+              bookingRequestId,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error ||
+            "Unable to start payment."
+        );
+      }
+
+      const checkoutUrl =
+        String(
+          data?.checkoutUrl ??
+          ""
+        ).trim();
+
+      if (!checkoutUrl) {
+        throw new Error(
+          "Stripe Checkout URL was not returned."
+        );
+      }
+
+      window.location.assign(
+        checkoutUrl
+      );
+    } catch (paymentStartError) {
+      console.error(
+        "Unable to start Stripe Checkout:",
+        paymentStartError
+      );
+
+      const message =
+        paymentStartError instanceof Error
+          ? paymentStartError.message
+          : "Unable to start payment.";
+
+      window.alert(message);
+
+      setPaymentBookingId("");
+    }
+  }
 
 
   return (
@@ -1316,6 +1491,13 @@ export default function DriverTripsPage() {
                     <BookingCard
                       key={booking.id}
                       booking={booking}
+                      onPay={
+                        startCheckout
+                      }
+                      paymentLoading={
+                        paymentBookingId ===
+                        booking.id
+                      }
                     />
                   )
                 )}
@@ -1345,6 +1527,13 @@ export default function DriverTripsPage() {
                     <BookingCard
                       key={booking.id}
                       booking={booking}
+                      onPay={
+                        startCheckout
+                      }
+                      paymentLoading={
+                        paymentBookingId ===
+                        booking.id
+                      }
                     />
                   )
                 )}

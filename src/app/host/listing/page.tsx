@@ -133,6 +133,13 @@ export default function HostListingPage() {
 
 
   const [
+    sessionPrice,
+    setSessionPrice,
+  ] =
+    useState("");
+
+
+  const [
     pageLoading,
     setPageLoading,
   ] =
@@ -265,6 +272,18 @@ export default function HostListingPage() {
         setAmenities(
           nextListing.amenities
         );
+
+        setSessionPrice(
+          nextListing.pricing
+            .configured &&
+          nextListing.pricing
+            .sessionPrice > 0
+            ? String(
+                nextListing.pricing
+                  .sessionPrice
+              )
+            : ""
+        );
       } catch (loadError) {
         if (
           !cancelled
@@ -391,6 +410,7 @@ export default function HostListingPage() {
                 rules,
                 availability,
                 amenities,
+                sessionPrice,
               }),
           }
         );
@@ -435,6 +455,16 @@ export default function HostListingPage() {
 
       setAmenities(
         updated.amenities
+      );
+
+      setSessionPrice(
+        updated.pricing
+          .configured
+          ? String(
+              updated.pricing
+                .sessionPrice
+            )
+          : ""
       );
 
       setSaved(true);
@@ -932,6 +962,73 @@ export default function HostListingPage() {
 
                 <span className="mt-1 block text-right text-xs text-slate-400">
                   {rules.length}/500
+                </span>
+
+              </label>
+
+            </section>
+
+
+            {/* =====================================================
+                SESSION PRICING
+            ====================================================== */}
+
+            <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                Session pricing
+              </p>
+
+              <h2 className="mt-2 text-2xl font-black text-slate-950">
+                Set your charging price
+              </h2>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+                Set the flat amount a Driver pays for one approved charging session. KIVO currently uses flat session pricing rather than per-kWh billing.
+              </p>
+
+              <label className="mt-6 block max-w-sm">
+
+                <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                  Session price
+                </span>
+
+                <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-white px-4 transition focus-within:border-emerald-400">
+
+                  <span className="font-black text-slate-500">
+                    $
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0.50"
+                    max="500"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={
+                      sessionPrice
+                    }
+                    onChange={(
+                      event
+                    ) => {
+                      setSaved(false);
+
+                      setSessionPrice(
+                        event.target.value
+                      );
+                    }}
+                    placeholder="15.00"
+                    className="min-w-0 flex-1 bg-transparent px-2 py-3 text-lg font-black text-slate-950 outline-none"
+                  />
+
+                  <span className="text-xs font-black uppercase tracking-[0.12em] text-slate-400">
+                    USD
+                  </span>
+
+                </div>
+
+                <span className="mt-2 block text-xs leading-5 text-slate-500">
+                  Drivers will see this price before requesting your charger. Payment is collected only after you accept the request.
                 </span>
 
               </label>

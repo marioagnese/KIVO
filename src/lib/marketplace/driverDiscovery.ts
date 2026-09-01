@@ -240,6 +240,23 @@ export function distanceToRoute(
    DISCOVERY
 ========================================================= */
 
+/*
+ * KIVO searches a corridor around the Driver's route,
+ * not only Hosts sitting directly beside the route line.
+ *
+ * 30 miles is the initial marketplace ceiling.
+ * Ranking below still strongly favors the smallest detour.
+ *
+ * Keeping this as an explicit constant also lets KIVO
+ * move to adaptive rural / charger-desert corridors later.
+ */
+export const ROUTE_CORRIDOR_MILES =
+  30;
+
+export const DESTINATION_RADIUS_MILES =
+  30;
+
+
 export function discoverHostsForRoute({
   hosts,
   routeCoordinates,
@@ -264,12 +281,13 @@ export function discoverHostsForRoute({
         );
 
       return (
-        routeDistance <= 12 ||
+        routeDistance <=
+          ROUTE_CORRIDOR_MILES ||
         (
           host.coverage ===
             "destination" &&
           destinationDistance <=
-            30
+            DESTINATION_RADIUS_MILES
         )
       );
     }

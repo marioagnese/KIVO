@@ -236,16 +236,41 @@ export async function POST(request: Request) {
         "KIVO Host"
       ).trim();
 
+    /*
+     * Booking price is server-authoritative.
+     *
+     * Never accept a price supplied by the Driver browser.
+     * The Host listing in Firestore is the source of truth.
+     */
+    const hostPricing =
+      host.pricing &&
+      typeof host.pricing === "object"
+        ? host.pricing as Record<
+            string,
+            unknown
+          >
+        : null;
+
     const priceRaw =
+      hostPricing?.sessionPrice ??
       host.sessionPrice ??
-      host.price ??
-      body.price ??
-      0;
+      host.price;
 
     const price =
-      Number.isFinite(Number(priceRaw))
-        ? Number(priceRaw)
-        : 0;
+      Number(priceRaw);
+
+    if (
+      !Number.isFinite(price) ||
+      price <= 0
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This Host has not configured a valid session price.",
+        },
+        { status: 409 }
+      );
+    }
 
     /*
      * Snapshot the public charger details onto the booking.
@@ -336,6 +361,13 @@ export async function POST(request: Request) {
 
       price,
       currency: "USD",
+
+      /*
+       * Payment is not due until the Host accepts.
+       * Stripe will later transition this to "paid".
+       */
+      paymentStatus:
+        "not_started",
 
       charger,
       speed,

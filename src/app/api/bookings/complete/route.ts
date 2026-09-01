@@ -81,6 +81,19 @@ export async function POST(request: Request) {
     }
 
     if (
+      booking.paymentStatus !==
+      "paid"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Only a paid charging session can be completed.",
+        },
+        { status: 409 }
+      );
+    }
+
+    if (
       !booking.privateAddress ||
       !booking.arrivalInstructions
     ) {
