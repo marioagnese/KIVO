@@ -66,6 +66,9 @@ export async function POST(request: Request) {
     const hostListingId =
       String(body.hostListingId ?? "").trim();
 
+    const requestedDate =
+      String(body.requestedDate ?? "").trim();
+
     const requestedTime =
       String(body.requestedTime ?? "").trim();
 
@@ -74,11 +77,82 @@ export async function POST(request: Request) {
 
     if (
       !hostListingId ||
+      !requestedDate ||
       !requestedTime ||
       !vehicleConnector
     ) {
       return NextResponse.json(
         { error: "Missing booking request information." },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(
+        requestedDate
+      )
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Choose a valid charging date.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const [
+      requestedYear,
+      requestedMonth,
+      requestedDay,
+    ] =
+      requestedDate
+        .split("-")
+        .map(Number);
+
+    const requestedCalendarDate =
+      new Date(
+        requestedYear,
+        requestedMonth - 1,
+        requestedDay
+      );
+
+    if (
+      requestedCalendarDate.getFullYear() !==
+        requestedYear ||
+      requestedCalendarDate.getMonth() !==
+        requestedMonth - 1 ||
+      requestedCalendarDate.getDate() !==
+        requestedDay
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Choose a valid charging date.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const today =
+      new Date();
+
+    today.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    if (
+      requestedCalendarDate <
+      today
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Charging requests cannot be made for a past date.",
+        },
         { status: 400 }
       );
     }
@@ -256,6 +330,7 @@ export async function POST(request: Request) {
       hostArea,
       hostState,
 
+      requestedDate,
       requestedTime,
       vehicleConnector,
 
@@ -318,7 +393,7 @@ export async function POST(request: Request) {
             "Your charging request is on its way.",
           body:
             kivoParagraph(
-              `Your request for ${requestedTime} has been sent to ${hostName} in ${hostArea}${hostState ? `, ${hostState}` : ""}.`
+              `Your request for ${requestedDate} at ${requestedTime} has been sent to ${hostName} in ${hostArea}${hostState ? `, ${hostState}` : ""}.`
             ) +
             kivoParagraph(
               "The Host will review your request. KIVO will let you know when it is accepted or declined."
@@ -367,7 +442,7 @@ export async function POST(request: Request) {
               "You have a new charging request.",
             body:
               kivoParagraph(
-                `A KIVO Driver has requested a charging session for ${requestedTime}.`
+                `A KIVO Driver has requested a charging session for ${requestedDate} at ${requestedTime}.`
               ) +
               kivoParagraph(
                 `Vehicle connector: ${vehicleConnector}.`

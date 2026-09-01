@@ -143,6 +143,23 @@ function DriverFindPageContent() {
     );
 
   const [
+    selectedDate,
+    setSelectedDate,
+  ] =
+    useState(() => {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(
+        now.getMonth() + 1
+      ).padStart(2, "0");
+      const day = String(
+        now.getDate()
+      ).padStart(2, "0");
+
+      return `${year}-${month}-${day}`;
+    });
+
+  const [
     selectedTime,
     setSelectedTime,
   ] =
@@ -1125,6 +1142,9 @@ function DriverFindPageContent() {
               hostListingId:
                 host.firestoreId,
 
+              requestedDate:
+                selectedDate,
+
               requestedTime:
                 selectedTime,
 
@@ -1613,11 +1633,62 @@ function DriverFindPageContent() {
                             </p>
 
                             <p className="mt-2 text-sm leading-6 text-slate-600">
-                              Choose your expected arrival time and confirm your vehicle connector.
+                              Choose your charging date, expected arrival time, and confirm your vehicle connector.
                             </p>
 
 
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+
+                              <label className="block">
+
+                                <span className="text-xs font-bold text-slate-500">
+                                  Charging date
+                                </span>
+
+                                <input
+                                  type="date"
+                                  value={
+                                    selectedDate
+                                  }
+                                  min={(() => {
+                                    const now =
+                                      new Date();
+
+                                    const year =
+                                      now.getFullYear();
+
+                                    const month =
+                                      String(
+                                        now.getMonth() +
+                                          1
+                                      ).padStart(
+                                        2,
+                                        "0"
+                                      );
+
+                                    const day =
+                                      String(
+                                        now.getDate()
+                                      ).padStart(
+                                        2,
+                                        "0"
+                                      );
+
+                                    return `${year}-${month}-${day}`;
+                                  })()}
+                                  onChange={(
+                                    event
+                                  ) =>
+                                    setSelectedDate(
+                                      event.target
+                                        .value
+                                    )
+                                  }
+                                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-800 outline-none focus:border-cyan-400"
+                                />
+
+                              </label>
+
 
                               <label className="block">
 
