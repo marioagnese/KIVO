@@ -63,6 +63,7 @@ type HostBookingRequest = {
 
   hostArea: string;
 
+  requestedDate: string;
   requestedTime: string;
   vehicleConnector: string;
 
@@ -127,6 +128,58 @@ function normalizeCharger(
   }
 
   return "";
+}
+
+
+function formatRequestedDate(
+  value: string
+) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(
+      value
+    )
+  ) {
+    return "";
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] =
+    value
+      .split("-")
+      .map(Number);
+
+  const date =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day
+      )
+    );
+
+  if (
+    date.getUTCFullYear() !==
+      year ||
+    date.getUTCMonth() !==
+      month - 1 ||
+    date.getUTCDate() !==
+      day
+  ) {
+    return "";
+  }
+
+  return date.toLocaleDateString(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }
+  );
 }
 
 
@@ -285,6 +338,10 @@ export default function HostRequestsPage() {
 
                   hostArea:
                     data.hostArea ||
+                    "",
+
+                  requestedDate:
+                    data.requestedDate ||
                     "",
 
                   requestedTime:
@@ -992,8 +1049,17 @@ export default function HostRequestsPage() {
 
 
                       <h2 className="mt-3 text-2xl font-black">
-                        {request.requestedTime ||
-                          "Requested session"}
+                        {formatRequestedDate(
+                          request.requestedDate
+                        )
+                          ? `${formatRequestedDate(
+                              request.requestedDate
+                            )} · ${
+                              request.requestedTime ||
+                              "Time not provided"
+                            }`
+                          : request.requestedTime ||
+                            "Requested session"}
                       </h2>
 
 

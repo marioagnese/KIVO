@@ -37,6 +37,7 @@ type BookingRequest = {
   hostArea: string;
   hostState: string;
 
+  requestedDate: string;
   requestedTime: string;
   vehicleConnector: string;
 
@@ -79,6 +80,58 @@ function timestamp(
   return value instanceof Timestamp
     ? value
     : null;
+}
+
+
+function formatRequestedDate(
+  value: string
+) {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(
+      value
+    )
+  ) {
+    return "";
+  }
+
+  const [
+    year,
+    month,
+    day,
+  ] =
+    value
+      .split("-")
+      .map(Number);
+
+  const date =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day
+      )
+    );
+
+  if (
+    date.getUTCFullYear() !==
+      year ||
+    date.getUTCMonth() !==
+      month - 1 ||
+    date.getUTCDate() !==
+      day
+  ) {
+    return "";
+  }
+
+  return date.toLocaleDateString(
+    undefined,
+    {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }
+  );
 }
 
 
@@ -277,7 +330,7 @@ function BookingCard({
                 text-slate-400
               "
             >
-              Requested time
+              Charging date & time
             </div>
 
             <div
@@ -287,8 +340,17 @@ function BookingCard({
                 text-slate-950
               "
             >
-              {booking.requestedTime ||
-                "Time not provided"}
+              {formatRequestedDate(
+                booking.requestedDate
+              )
+                ? `${formatRequestedDate(
+                    booking.requestedDate
+                  )} · ${
+                    booking.requestedTime ||
+                    "Time not provided"
+                  }`
+                : booking.requestedTime ||
+                  "Date and time not provided"}
             </div>
           </div>
         </div>
@@ -830,6 +892,11 @@ export default function DriverTripsPage() {
 
                   hostState:
                     text(data.hostState),
+
+                  requestedDate:
+                    text(
+                      data.requestedDate
+                    ),
 
                   requestedTime:
                     text(
