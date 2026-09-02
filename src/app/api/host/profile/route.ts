@@ -347,6 +347,26 @@ export async function GET(
             ?.toDate?.()
             ?.toISOString?.() ??
           null,
+
+        foundingHost:
+          activation.foundingHost === true,
+
+        foundingHostNumber:
+          Number.isInteger(
+            Number(
+              activation.foundingHostNumber
+            )
+          )
+            ? Number(
+                activation.foundingHostNumber
+              )
+            : null,
+
+        commissionPlan:
+          String(
+            activation.commissionPlan ??
+              "standard"
+          ),
       },
     });
   } catch (error) {

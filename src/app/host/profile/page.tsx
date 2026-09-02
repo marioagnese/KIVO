@@ -40,6 +40,10 @@ type HostProfile = {
 
   status: string;
   activatedAt: string | null;
+
+  foundingHost: boolean;
+  foundingHostNumber: number | null;
+  commissionPlan: string;
 };
 
 
@@ -968,6 +972,31 @@ export default function HostProfilePage() {
                           ? "Checking your Stripe payout status..."
                           : "Set up your payout account securely with Stripe. Your banking information is handled by Stripe and is not stored by KIVO."}
                   </p>
+
+                  {profile?.foundingHost &&
+                    profile.commissionPlan ===
+                      "founding_lifetime_zero" && (
+                      <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                          Founding Host benefit
+                        </p>
+
+                        <p className="mt-2 text-lg font-black text-emerald-950">
+                          0% KIVO commission for life
+                        </p>
+
+                        <p className="mt-2 text-xs leading-5 text-emerald-800">
+                          {profile.foundingHostNumber
+                            ? `Founding Host #${profile.foundingHostNumber}. `
+                            : ""}
+                          You keep 100% of your KIVO charging earnings.
+                        </p>
+
+                        <p className="mt-2 text-[11px] leading-5 text-emerald-700/70">
+                          Third-party payment processing, banking, taxes or other external charges may still apply.
+                        </p>
+                      </div>
+                    )}
 
                   {payoutStatus === "ready" ? (
                     <div className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800">

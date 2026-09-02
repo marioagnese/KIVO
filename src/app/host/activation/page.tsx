@@ -83,7 +83,12 @@ type ActivationData = {
       charger: { status: string };
       legal: { status: string };
       listing: { status: string };
+      payouts: { status: string };
     };
+
+    foundingHost: boolean;
+    foundingHostNumber: number | null;
+    commissionPlan: string;
   };
 };
 
@@ -228,6 +233,16 @@ export default function HostActivationPage() {
   const [savingListing, setSavingListing] =
     useState(false);
 
+  const [
+    payoutLoading,
+    setPayoutLoading,
+  ] = useState(false);
+
+  const [
+    payoutMessage,
+    setPayoutMessage,
+  ] = useState("");
+
   useEffect(() => {
     void initializeActivation();
   }, []);
@@ -274,6 +289,24 @@ export default function HostActivationPage() {
             ? "ready"
             : "password"
         );
+
+        const params =
+          new URLSearchParams(
+            window.location.search
+          );
+
+        if (
+          params.get("stripe") ===
+          "return"
+        ) {
+          window.history.replaceState(
+            {},
+            "",
+            "/host/activation"
+          );
+
+          void refreshPayoutStatus();
+        }
 
         return;
       }
@@ -394,6 +427,124 @@ export default function HostActivationPage() {
     }
 
     return result as ActivationData;
+  }
+
+  async function refreshPayoutStatus() {
+    if (!auth?.currentUser) {
+      return;
+    }
+
+    setPayoutLoading(true);
+    setPayoutMessage("");
+
+    try {
+      const idToken =
+        await auth.currentUser.getIdToken(
+          true
+        );
+
+      const response =
+        await fetch(
+          "/api/stripe/connect/status",
+          {
+            headers: {
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to check payout status."
+        );
+      }
+
+      if (result.payoutsReady === true) {
+        setPayoutMessage(
+          "Payouts are ready. This activation requirement is complete."
+        );
+
+        const refreshed =
+          await validateActivationAccess();
+
+        setData(refreshed);
+      } else {
+        setPayoutMessage(
+          "Stripe payout setup still needs to be completed."
+        );
+      }
+    } catch (err) {
+      setPayoutMessage(
+        err instanceof Error
+          ? err.message
+          : "Unable to check payout status."
+      );
+    } finally {
+      setPayoutLoading(false);
+    }
+  }
+
+  async function startPayoutSetup() {
+    if (!auth?.currentUser) {
+      setPayoutMessage(
+        "KIVO sign-in is required."
+      );
+      return;
+    }
+
+    setPayoutLoading(true);
+    setPayoutMessage("");
+
+    try {
+      const idToken =
+        await auth.currentUser.getIdToken(
+          true
+        );
+
+      const response =
+        await fetch(
+          "/api/stripe/connect/onboard",
+          {
+            method: "POST",
+            headers: {
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+          }
+        );
+
+      const result =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "Unable to start payout setup."
+        );
+      }
+
+      if (!result.onboardingUrl) {
+        throw new Error(
+          "Stripe onboarding link was not returned."
+        );
+      }
+
+      window.location.href =
+        result.onboardingUrl;
+    } catch (err) {
+      setPayoutMessage(
+        err instanceof Error
+          ? err.message
+          : "Unable to start payout setup."
+      );
+
+      setPayoutLoading(false);
+    }
   }
 
   async function handleEmailSubmit(
@@ -1596,7 +1747,62 @@ export default function HostActivationPage() {
                   : "Complete"
               }
             />
+
+            <ActivationCard
+              title="Payout setup"
+              description="Connect Stripe securely so KIVO can send your charging earnings to you."
+              status={data.activation.gates.payouts.status}
+              onClick={() => {
+                if (
+                  data.activation.gates.payouts.status ===
+                  "complete"
+                ) {
+                  void refreshPayoutStatus();
+                } else {
+                  void startPayoutSetup();
+                }
+              }}
+              actionLabel={
+                payoutLoading
+                  ? "Checking..."
+                  : data.activation.gates.payouts.status ===
+                    "complete"
+                    ? "Verify status"
+                    : "Set up payouts"
+              }
+            />
           </div>
+
+          {data.activation.foundingHost &&
+            data.activation.commissionPlan ===
+              "founding_lifetime_zero" && (
+              <div className="mt-6 rounded-[28px] border border-emerald-300/30 bg-emerald-300/10 p-6">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                  Founding Host benefit
+                </p>
+
+                <h3 className="mt-2 text-2xl font-black text-white">
+                  0% KIVO commission for life
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-emerald-100/90">
+                  {data.activation.foundingHostNumber
+                    ? `Founding Host #${data.activation.foundingHostNumber}. `
+                    : ""}
+                  You keep 100% of your KIVO charging earnings.
+                </p>
+
+                <p className="mt-3 text-xs leading-5 text-slate-400">
+                  Third-party payment processing, banking, taxes or other external charges may still apply.
+                </p>
+              </div>
+            )}
+
+          {payoutMessage && (
+            <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm font-bold text-slate-200">
+              {payoutMessage}
+            </div>
+          )}
 
           {safetyOpen && (
             <form

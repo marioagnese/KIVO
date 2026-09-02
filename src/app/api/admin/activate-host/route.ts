@@ -251,6 +251,9 @@ export async function POST(
         activation.gates?.legal?.status,
       listing:
         activation.gates?.listing?.status,
+
+      payouts:
+        activation.gates?.payouts?.status,
     };
 
     const incomplete =

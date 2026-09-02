@@ -302,7 +302,35 @@ export async function POST(request: Request) {
                   "not_started"
               ),
           },
+
+          payouts: {
+            status:
+              String(
+                activation.gates?.payouts?.status ??
+                  "not_started"
+              ),
+          },
         },
+
+        foundingHost:
+          activation.foundingHost === true,
+
+        foundingHostNumber:
+          Number.isInteger(
+            Number(
+              activation.foundingHostNumber
+            )
+          )
+            ? Number(
+                activation.foundingHostNumber
+              )
+            : null,
+
+        commissionPlan:
+          String(
+            activation.commissionPlan ??
+              "standard"
+          ),
       },
     });
   } catch (error) {
