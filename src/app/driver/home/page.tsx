@@ -11,11 +11,22 @@ import {
   useRouter,
 } from "next/navigation";
 
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+} from "firebase/firestore";
+
 import KivoDriverShell from "@/components/driver/KivoDriverShell";
 
 import {
   useAuth,
 } from "@/context/AuthContext";
+
+import {
+  db,
+} from "@/lib/firebase";
 
 
 export default function DriverHomePage() {
@@ -33,6 +44,11 @@ export default function DriverHomePage() {
 
   const [to, setTo] =
     useState("");
+
+  const [
+    attentionCount,
+    setAttentionCount,
+  ] = useState(0);
 
 
   /* =========================================================
@@ -55,6 +71,75 @@ export default function DriverHomePage() {
     user,
     hasRole,
     router,
+  ]);
+
+
+  /* =========================================================
+     NEEDS ATTENTION
+  ========================================================= */
+
+  useEffect(() => {
+    if (
+      loading ||
+      !user ||
+      !hasRole("driver") ||
+      !db
+    ) {
+      setAttentionCount(0);
+      return;
+    }
+
+    const bookingsQuery =
+      query(
+        collection(
+          db,
+          "bookingRequests"
+        ),
+        where(
+          "driverUid",
+          "==",
+          user.uid
+        )
+      );
+
+    const unsubscribe =
+      onSnapshot(
+        bookingsQuery,
+        (snapshot) => {
+          const paymentRequired =
+            snapshot.docs.filter(
+              (document) => {
+                const data =
+                  document.data();
+
+                return (
+                  data.status ===
+                    "accepted" &&
+                  data.paymentStatus ===
+                    "required"
+                );
+              }
+            ).length;
+
+          setAttentionCount(
+            paymentRequired
+          );
+        },
+        (error) => {
+          console.error(
+            "Unable to load Driver attention items:",
+            error
+          );
+
+          setAttentionCount(0);
+        }
+      );
+
+    return unsubscribe;
+  }, [
+    loading,
+    user,
+    hasRole,
   ]);
 
 
@@ -394,6 +479,52 @@ export default function DriverHomePage() {
           </div>
 
         </section>
+
+
+        {/* =====================================================
+            NEEDS ATTENTION
+        ====================================================== */}
+
+        {attentionCount > 0 && (
+          <Link
+            href="/driver/trips"
+            className="mt-6 flex flex-col gap-4 rounded-[26px] border border-amber-200 bg-amber-50 px-6 py-5 shadow-sm transition hover:border-amber-300 hover:bg-amber-100/70 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-xl shadow-sm">
+                ⚡
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">
+                    Needs attention
+                  </p>
+
+                  <span className="rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-black text-white">
+                    {attentionCount}
+                  </span>
+                </div>
+
+                <h2 className="mt-1 text-lg font-black text-slate-950">
+                  {attentionCount === 1
+                    ? "Payment required"
+                    : "Payments required"}
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-600">
+                  {attentionCount === 1
+                    ? "A Host accepted your request. Complete payment to continue."
+                    : `${attentionCount} accepted trips are waiting for payment.`}
+                </p>
+              </div>
+            </div>
+
+            <span className="shrink-0 text-sm font-black text-amber-800">
+              View trips →
+            </span>
+          </Link>
+        )}
 
 
         {/* =====================================================
