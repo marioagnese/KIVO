@@ -55,9 +55,41 @@ export async function GET(request: Request) {
         ? userData.roles
         : [];
 
-    if (!roles.includes("host")) {
+    const hasHostRole =
+      roles.includes("host");
+
+    let activationEligible =
+      false;
+
+    if (!hasHostRole) {
+      const activationSnapshot =
+        await adminDb
+          .collection("hostActivations")
+          .doc(decoded.uid)
+          .get();
+
+      const activation =
+        activationSnapshot.data() ?? {};
+
+      activationEligible =
+        activationSnapshot.exists &&
+        (
+          activation.status ===
+            "activation_in_progress" ||
+          activation.status ===
+            "approved"
+        );
+    }
+
+    if (
+      !hasHostRole &&
+      !activationEligible
+    ) {
       return NextResponse.json(
-        { error: "KIVO Host access required." },
+        {
+          error:
+            "KIVO Host activation access required.",
+        },
         { status: 403 }
       );
     }
@@ -185,6 +217,45 @@ export async function GET(request: Request) {
       },
       { merge: true }
     );
+
+    /*
+     * Stripe is the authority for payout readiness.
+     * Client code can never mark this gate complete.
+     */
+    if (payoutsReady) {
+      await adminDb
+        .collection("hostActivations")
+        .doc(decoded.uid)
+        .set(
+          {
+            gates: {
+              payouts: {
+                status: "complete",
+
+                completedAt:
+                  FieldValue.serverTimestamp(),
+
+                source:
+                  "stripe_connect",
+              },
+            },
+
+            payoutReadiness: {
+              status: "ready",
+
+              mode:
+                stripeMode,
+
+              verifiedAt:
+                FieldValue.serverTimestamp(),
+            },
+
+            updatedAt:
+              FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+    }
 
     return NextResponse.json({
       ok: true,

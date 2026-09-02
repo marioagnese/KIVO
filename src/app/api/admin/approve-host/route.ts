@@ -311,6 +311,11 @@ export async function POST(request: Request) {
                     status:
                       "not_started",
                   },
+
+                  payouts: {
+                    status:
+                      "not_started",
+                  },
                 },
 
                 blockers: [],

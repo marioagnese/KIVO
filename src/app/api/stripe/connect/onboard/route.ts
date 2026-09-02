@@ -55,9 +55,47 @@ export async function POST(request: Request) {
         ? userData.roles
         : [];
 
-    if (!roles.includes("host")) {
+    const hasHostRole =
+      roles.includes("host");
+
+    /*
+     * Payout setup is now a required Host activation gate.
+     * Therefore an approved Host must be able to enter
+     * Stripe Connect BEFORE the operational Host role is
+     * granted.
+     */
+    let activationEligible =
+      false;
+
+    if (!hasHostRole) {
+      const activationSnapshot =
+        await adminDb
+          .collection("hostActivations")
+          .doc(decoded.uid)
+          .get();
+
+      const activation =
+        activationSnapshot.data() ?? {};
+
+      activationEligible =
+        activationSnapshot.exists &&
+        (
+          activation.status ===
+            "activation_in_progress" ||
+          activation.status ===
+            "approved"
+        );
+    }
+
+    if (
+      !hasHostRole &&
+      !activationEligible
+    ) {
       return NextResponse.json(
-        { error: "KIVO Host access required." },
+        {
+          error:
+            "KIVO Host activation access required.",
+        },
         { status: 403 }
       );
     }
@@ -252,10 +290,14 @@ export async function POST(request: Request) {
             },
 
             refresh_url:
-              `${appUrl}/host/profile?stripe=refresh`,
+              hasHostRole
+                ? `${appUrl}/host/profile?stripe=refresh`
+                : `${appUrl}/host/activation?stripe=refresh`,
 
             return_url:
-              `${appUrl}/host/profile?stripe=return`,
+              hasHostRole
+                ? `${appUrl}/host/profile?stripe=return`
+                : `${appUrl}/host/activation?stripe=return`,
           },
         },
       });
