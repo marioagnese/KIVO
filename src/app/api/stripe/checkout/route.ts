@@ -279,9 +279,11 @@ export async function POST(
      * is created. Never recalculate an already-paid
      * booking using a future commission policy.
      *
-     * Founding Hosts originate from the curated
-     * Founding Host lifecycle and therefore carry a
-     * leadId in hostActivations.
+     * IMPORTANT:
+     * leadId is provenance only.
+     *
+     * Pricing authority comes from the durable
+     * commissionEntitlement stored on hostActivations.
      */
     const activationSnapshot =
       await adminDb
@@ -292,18 +294,65 @@ export async function POST(
     const activation =
       activationSnapshot.data() ?? {};
 
-    const foundingLeadId =
-      typeof activation.leadId === "string"
-        ? activation.leadId.trim()
-        : "";
+    const entitlement =
+      activation.commissionEntitlement &&
+      typeof activation.commissionEntitlement ===
+        "object"
+        ? activation.commissionEntitlement as Record<
+            string,
+            unknown
+          >
+        : null;
+
+    const entitlementType =
+      String(
+        entitlement?.type ??
+        ""
+      ).trim();
+
+    const entitlementSource =
+      String(
+        entitlement?.source ??
+        ""
+      ).trim();
+
+    const entitlementRate =
+      Number(
+        entitlement?.rate
+      );
+
+    const foundingHostNumber =
+      Number(
+        activation.foundingHostNumber ??
+        0
+      );
 
     const isFoundingHost =
-      Boolean(foundingLeadId);
+      activation.foundingHost === true &&
+      entitlementType === "lifetime" &&
+      entitlementSource ===
+        "founding_host_cohort" &&
+      entitlementRate === 0 &&
+      Number.isInteger(
+        foundingHostNumber
+      ) &&
+      foundingHostNumber >= 1 &&
+      foundingHostNumber <= 200;
 
     const commissionRate =
       isFoundingHost
         ? 0
         : 0.05;
+
+    const commissionPlan =
+      isFoundingHost
+        ? "founding_lifetime_zero"
+        : "standard";
+
+    const foundingLeadId =
+      typeof activation.leadId === "string"
+        ? activation.leadId.trim()
+        : "";
 
     const commissionAmount =
       Math.round(
@@ -497,6 +546,13 @@ export async function POST(
 
             foundingHost:
               isFoundingHost,
+
+            foundingHostNumber:
+              isFoundingHost
+                ? foundingHostNumber
+                : null,
+
+            commissionPlan,
 
             foundingLeadId:
               foundingLeadId ||
