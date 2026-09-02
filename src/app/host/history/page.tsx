@@ -51,6 +51,20 @@ type HostHistoryBooking = {
 
   hostArea: string;
 
+  settlementStatus?:
+    | "processing"
+    | "transferred"
+    | "failed";
+
+  settlement?: {
+    grossAmount?: number;
+    commissionRate?: number;
+    commissionAmount?: number;
+    hostAmount?: number;
+    currency?: string;
+    foundingHost?: boolean;
+  };
+
   route?: {
     from?: string;
     to?: string;
@@ -214,6 +228,20 @@ export default function HostHistoryPage() {
   ] =
     useState("");
 
+  const [
+    retryingId,
+    setRetryingId,
+  ] =
+    useState<string | null>(
+      null
+    );
+
+  const [
+    settlementMessage,
+    setSettlementMessage,
+  ] =
+    useState("");
+
 
   /* =========================================================
      HOST HISTORY
@@ -287,6 +315,16 @@ export default function HostHistoryPage() {
                     hostArea:
                       data.hostArea ||
                       "",
+
+                    settlementStatus:
+                      data.settlementStatus,
+
+                    settlement:
+                      data.settlement &&
+                      typeof data.settlement ===
+                        "object"
+                        ? data.settlement
+                        : undefined,
 
                     route:
                       data.route ||
@@ -522,6 +560,86 @@ export default function HostHistoryPage() {
 
 
   /* =========================================================
+     RETRY HOST SETTLEMENT
+  ========================================================= */
+
+  async function retrySettlement(
+    requestId: string
+  ) {
+    if (!user) {
+      return;
+    }
+
+    setRetryingId(requestId);
+    setError("");
+    setSettlementMessage("");
+
+    try {
+      const idToken =
+        await user.getIdToken();
+
+      const response =
+        await fetch(
+          "/api/bookings/complete",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+
+              Authorization:
+                `Bearer ${idToken}`,
+            },
+
+            body:
+              JSON.stringify({
+                requestId,
+              }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "KIVO could not retry Host settlement."
+        );
+      }
+
+      if (
+        data.settlementStatus ===
+        "transferred"
+      ) {
+        setSettlementMessage(
+          "Host earnings transferred successfully."
+        );
+      } else {
+        setError(
+          data.warning ||
+            "Settlement still needs attention."
+        );
+      }
+    } catch (retryError) {
+      console.error(
+        "Host settlement retry failed:",
+        retryError
+      );
+
+      setError(
+        retryError instanceof Error
+          ? retryError.message
+          : "KIVO could not retry Host settlement."
+      );
+    } finally {
+      setRetryingId(null);
+    }
+  }
+
+
+  /* =========================================================
      GUARD
   ========================================================= */
 
@@ -618,6 +736,12 @@ export default function HostHistoryPage() {
         {error && (
           <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">
             {error}
+          </div>
+        )}
+
+        {settlementMessage && (
+          <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm font-bold text-emerald-800">
+            {settlementMessage}
           </div>
         )}
 
@@ -831,15 +955,108 @@ export default function HostHistoryPage() {
 
 
                       {completed && (
-                        <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
+                        <div className="mt-5 space-y-3">
 
-                          <p className="font-black text-emerald-900">
-                            ✓ Charging session completed
-                          </p>
+                          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-5 py-4">
 
-                          <p className="mt-1 text-sm text-emerald-800/80">
-                            This session is part of your KIVO hosting history.
-                          </p>
+                            <p className="font-black text-emerald-900">
+                              ✓ Charging session completed
+                            </p>
+
+                            <p className="mt-1 text-sm text-emerald-800/80">
+                              This session is part of your KIVO hosting history.
+                            </p>
+
+                          </div>
+
+                          {booking.settlementStatus ===
+                            "transferred" && (
+                            <div className="rounded-2xl border border-emerald-200 bg-white px-5 py-4">
+
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+                                <div>
+                                  <p className="font-black text-emerald-800">
+                                    ✓ Earnings transferred
+                                  </p>
+
+                                  <p className="mt-1 text-sm text-slate-500">
+                                    {booking.settlement?.foundingHost
+                                      ? "Founding Host · 0% KIVO commission"
+                                      : "KIVO commission applied"}
+                                  </p>
+                                </div>
+
+                                {typeof booking.settlement?.hostAmount ===
+                                  "number" && (
+                                  <p className="text-xl font-black text-slate-950">
+                                    $
+                                    {(
+                                      booking.settlement.hostAmount /
+                                      100
+                                    ).toFixed(2)}
+                                  </p>
+                                )}
+
+                              </div>
+
+                            </div>
+                          )}
+
+                          {booking.settlementStatus ===
+                            "processing" && (
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+
+                              <p className="font-black text-amber-900">
+                                Settlement processing
+                              </p>
+
+                              <p className="mt-1 text-sm text-amber-800/80">
+                                KIVO is transferring your Host earnings.
+                              </p>
+
+                            </div>
+                          )}
+
+                          {booking.settlementStatus ===
+                            "failed" && (
+                            <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+
+                              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+                                <div>
+                                  <p className="font-black text-red-800">
+                                    ⚠ Settlement needs attention
+                                  </p>
+
+                                  <p className="mt-1 text-sm text-red-700/80">
+                                    Your charging session is complete, but the earnings transfer did not finish.
+                                  </p>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  disabled={
+                                    retryingId ===
+                                    booking.id
+                                  }
+                                  onClick={() =>
+                                    retrySettlement(
+                                      booking.id
+                                    )
+                                  }
+                                  className="shrink-0 rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:opacity-50"
+                                >
+                                  {retryingId ===
+                                  booking.id
+                                    ? "Retrying..."
+                                    : "Retry settlement"}
+                                </button>
+
+                              </div>
+
+                            </div>
+                          )}
 
                         </div>
                       )}
