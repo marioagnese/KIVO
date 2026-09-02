@@ -213,7 +213,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "KIVO sandbox payments currently support USD only.",
+            "KIVO payments currently support USD only.",
         },
         { status: 409 }
       );
@@ -430,11 +430,125 @@ export async function POST(
       `KIVO_${bookingRequestId}`;
 
     /*
-     * Avoid duplicate Checkout Sessions
-     * from double-clicks/retries.
+     * Reuse an existing OPEN Checkout Session.
+     *
+     * This handles:
+     * - Driver clicking Pay more than once
+     * - browser refreshes
+     * - network retries after KIVO already created
+     *   a usable Stripe Checkout Session
+     *
+     * Do not reuse expired or completed sessions.
      */
+    const existingStripePayment =
+      booking.stripePayment &&
+      typeof booking.stripePayment ===
+        "object"
+        ? booking.stripePayment as Record<
+            string,
+            unknown
+          >
+        : null;
+
+    const existingCheckoutSessionId =
+      String(
+        existingStripePayment
+          ?.checkoutSessionId ??
+        ""
+      ).trim();
+
+    if (existingCheckoutSessionId) {
+      try {
+        const existingSession =
+          await stripe.checkout.sessions.retrieve(
+            existingCheckoutSessionId
+          );
+
+        if (
+          existingSession.status ===
+            "open" &&
+          existingSession.url
+        ) {
+          return NextResponse.json({
+            ok: true,
+            checkoutUrl:
+              existingSession.url,
+            checkoutSessionId:
+              existingSession.id,
+            reused: true,
+          });
+        }
+
+        /*
+         * A completed Stripe Checkout must never
+         * produce a second payable Session merely
+         * because the webhook has not reached
+         * Firestore yet.
+         */
+        if (
+          existingSession.status ===
+            "complete" ||
+          existingSession.payment_status ===
+            "paid"
+        ) {
+          return NextResponse.json(
+            {
+              error:
+                "Your payment has already been completed and KIVO is confirming it.",
+              paymentPendingConfirmation:
+                true,
+              checkoutSessionId:
+                existingSession.id,
+            },
+            { status: 409 }
+          );
+        }
+      } catch (existingSessionError) {
+        /*
+         * A missing/stale Session must not block
+         * the Driver from starting a fresh payment
+         * attempt.
+         */
+        console.warn(
+          "Existing KIVO Checkout Session could not be reused:",
+          existingSessionError
+        );
+      }
+    }
+
+    /*
+     * Every genuinely new payment attempt receives
+     * a new attempt number.
+     *
+     * The attempt number is part of the Stripe
+     * idempotency key:
+     *
+     *   booking + attempt
+     *
+     * That keeps double-clicks/network retries
+     * idempotent while allowing a Driver to retry
+     * after an expired or cancelled Checkout.
+     */
+    const previousCheckoutAttemptRaw =
+      Number(
+        existingStripePayment
+          ?.checkoutAttempt ??
+        0
+      );
+
+    const previousCheckoutAttempt =
+      Number.isInteger(
+        previousCheckoutAttemptRaw
+      ) &&
+      previousCheckoutAttemptRaw >= 0
+        ? previousCheckoutAttemptRaw
+        : 0;
+
+    const checkoutAttempt =
+      previousCheckoutAttempt + 1;
+
     const idempotencyKey =
-      `kivo_checkout_${bookingRequestId}`;
+      `kivo_checkout_${bookingRequestId}_${checkoutAttempt}`;
 
     const session =
       await stripe.checkout.sessions.create(
@@ -545,6 +659,8 @@ export async function POST(
           checkoutSessionId:
             session.id,
 
+          checkoutAttempt,
+
           transferGroup,
 
           hostAccountId:
@@ -593,6 +709,8 @@ export async function POST(
         session.url,
       checkoutSessionId:
         session.id,
+      checkoutAttempt,
+      reused: false,
     });
   } catch (error) {
     console.error(
