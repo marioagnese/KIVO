@@ -5,7 +5,11 @@ import {
   adminDb,
 } from "@/lib/firebaseAdmin";
 
-import { stripe } from "@/lib/stripe";
+import {
+  stripe,
+  stripeConnectProfileKey,
+  stripeMode,
+} from "@/lib/stripe";
 
 
 export async function POST(
@@ -254,7 +258,23 @@ export async function POST(
       hostProfileSnapshot.data() ??
       {};
 
-    const stripeConnect =
+    const selectedStripeConnect =
+      hostProfile[
+        stripeConnectProfileKey
+      ] &&
+      typeof hostProfile[
+        stripeConnectProfileKey
+      ] === "object"
+        ? hostProfile[
+            stripeConnectProfileKey
+          ] as Record<
+            string,
+            unknown
+          >
+        : null;
+
+    const legacyTestStripeConnect =
+      stripeMode === "test" &&
       hostProfile.stripeConnect &&
       typeof hostProfile.stripeConnect ===
         "object"
@@ -263,6 +283,10 @@ export async function POST(
             unknown
           >
         : null;
+
+    const stripeConnect =
+      selectedStripeConnect ??
+      legacyTestStripeConnect;
 
     const stripeAccountId =
       String(
