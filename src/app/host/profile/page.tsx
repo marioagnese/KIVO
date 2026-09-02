@@ -747,6 +747,15 @@ export default function HostProfilePage() {
                         </span>
                       )}
 
+                      {profile.foundingHost && (
+                        <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-black uppercase tracking-[0.1em] text-amber-800">
+                          ★ Founding Host
+                          {profile.foundingHostNumber
+                            ? ` #${profile.foundingHostNumber}`
+                            : ""}
+                        </span>
+                      )}
+
                     </div>
 
                     <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
@@ -1128,6 +1137,12 @@ export default function HostProfilePage() {
                           "verified" && (
                           <span className="text-xs font-black text-emerald-700">
                             ✓ VERIFIED
+                          </span>
+                        )}
+
+                        {profile.foundingHost && (
+                          <span className="text-xs font-black text-amber-700">
+                            ★ FOUNDING HOST
                           </span>
                         )}
 

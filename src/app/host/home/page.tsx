@@ -1,11 +1,98 @@
 "use client";
 
 import Link from "next/link";
+import {
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+} from "firebase/firestore";
 
 import KivoHostShell from "@/components/host/KivoHostShell";
 
+import {
+  useAuth,
+} from "@/context/AuthContext";
+
+import {
+  db,
+} from "@/lib/firebase";
+
 
 export default function HostHomePage() {
+  const {
+    user,
+    loading,
+    hasRole,
+  } = useAuth();
+
+  const [
+    attentionCount,
+    setAttentionCount,
+  ] = useState(0);
+
+  useEffect(() => {
+    if (
+      loading ||
+      !user ||
+      !hasRole("host") ||
+      !db
+    ) {
+      setAttentionCount(0);
+      return;
+    }
+
+    const requestsQuery =
+      query(
+        collection(
+          db,
+          "bookingRequests"
+        ),
+        where(
+          "hostUid",
+          "==",
+          user.uid
+        )
+      );
+
+    const unsubscribe =
+      onSnapshot(
+        requestsQuery,
+        (snapshot) => {
+          const pendingCount =
+            snapshot.docs.filter(
+              (document) =>
+                document.data()
+                  .status ===
+                "pending"
+            ).length;
+
+          setAttentionCount(
+            pendingCount
+          );
+        },
+        (error) => {
+          console.error(
+            "Unable to load Host attention items:",
+            error
+          );
+
+          setAttentionCount(0);
+        }
+      );
+
+    return unsubscribe;
+  }, [
+    loading,
+    user,
+    hasRole,
+  ]);
+
   return (
     <KivoHostShell active="home">
 
@@ -31,6 +118,52 @@ export default function HostHomePage() {
           </p>
 
         </section>
+
+
+        {/* =====================================================
+            NEEDS ATTENTION
+        ====================================================== */}
+
+        {attentionCount > 0 && (
+          <Link
+            href="/host/requests"
+            className="mt-6 flex flex-col gap-4 rounded-[26px] border border-amber-200 bg-amber-50 px-6 py-5 shadow-sm transition hover:border-amber-300 hover:bg-amber-100/70 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-xl shadow-sm">
+                🔔
+              </div>
+
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-700">
+                    Needs attention
+                  </p>
+
+                  <span className="rounded-full bg-amber-600 px-2 py-0.5 text-[10px] font-black text-white">
+                    {attentionCount}
+                  </span>
+                </div>
+
+                <h2 className="mt-1 text-lg font-black text-slate-950">
+                  {attentionCount === 1
+                    ? "New charging request"
+                    : "New charging requests"}
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-600">
+                  {attentionCount === 1
+                    ? "A Driver is waiting for your response."
+                    : `${attentionCount} Drivers are waiting for your response.`}
+                </p>
+              </div>
+            </div>
+
+            <span className="shrink-0 text-sm font-black text-amber-800">
+              Review requests →
+            </span>
+          </Link>
+        )}
 
 
         {/* =====================================================
