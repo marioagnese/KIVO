@@ -3179,7 +3179,44 @@ export default function Home({
 
 
           {!user ? (
-            <nav className="flex shrink-0 items-center gap-2 lg:gap-4">
+            <>
+              {/* MOBILE PUBLIC NAV
+                  Keep the first mobile viewport intentionally simple.
+                  Acquisition actions remain in page content; Login must
+                  always remain visible without horizontal scrolling. */}
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href =
+                    "/login";
+                }}
+                className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-white/20 bg-white/[0.08] px-3.5 py-3 text-sm font-semibold text-white backdrop-blur-md transition hover:border-white/60 hover:bg-white/[0.12] md:hidden"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.9"
+                  className="h-5 w-5 text-white/80"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10 17l5-5-5-5M15 12H3"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M14 4h5a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-5"
+                  />
+                </svg>
+
+                <span>Log in</span>
+              </button>
+
+              {/* TABLET / DESKTOP PUBLIC NAV */}
+              <nav className="hidden shrink-0 items-center gap-2 md:flex lg:gap-4">
 
               <button
                 type="button"
@@ -3312,7 +3349,8 @@ export default function Home({
                 <span>Log in</span>
               </button>
 
-            </nav>
+              </nav>
+            </>
           ) : (
             <nav className="flex items-center gap-3">
 
