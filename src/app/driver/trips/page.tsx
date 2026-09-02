@@ -534,15 +534,20 @@ function BookingCard({
         )}
 
         {booking.status === "accepted" &&
-          paymentPaid &&
-          !arrivalReady && (
-            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
-              <p className="font-black text-emerald-900">
-                ✓ Payment confirmed
-              </p>
+          paymentPaid && (
+            <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                  ✓ Paid
+                </p>
 
-              <p className="mt-1 text-sm leading-6 text-emerald-800/80">
-                Your Host can now securely share the private charging address and arrival instructions.
+                <p className="mt-1 text-sm font-bold text-emerald-950">
+                  Payment confirmed
+                </p>
+              </div>
+
+              <p className="text-lg font-black text-emerald-950">
+                ${booking.price.toFixed(2)}
               </p>
             </div>
           )}

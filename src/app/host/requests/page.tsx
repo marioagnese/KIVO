@@ -1288,6 +1288,27 @@ export default function HostRequestsPage() {
                   )}
 
                 {request.status === "accepted" &&
+                  request.paymentStatus === "paid" && (
+                    <div className="mt-6 border-t border-slate-100 pt-6">
+                      <div className="flex items-center justify-between gap-4 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 sm:p-6">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">
+                            ✓ Paid
+                          </p>
+
+                          <p className="mt-1 text-sm font-bold text-emerald-950">
+                            Driver payment confirmed
+                          </p>
+                        </div>
+
+                        <p className="text-xl font-black text-emerald-950">
+                          ${request.price.toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                {request.status === "accepted" &&
                   request.paymentStatus === "paid" &&
                   !request.arrivalDetailsShared && (
                     <div className="mt-6 border-t border-slate-100 pt-6">
