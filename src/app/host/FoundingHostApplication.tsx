@@ -31,6 +31,8 @@ export default function FoundingHostApplication() {
   const [form, setForm] = useState<FormState>(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [submittedLeadId, setSubmittedLeadId] = useState("");
+  const [submittedEmail, setSubmittedEmail] = useState("");
   const [error, setError] = useState("");
 
   function updateField<K extends keyof FormState>(
@@ -89,7 +91,7 @@ export default function FoundingHostApplication() {
     setSubmitting(true);
 
     try {
-      await addDoc(
+      const leadDocument = await addDoc(
         collection(db, "foundingHostLeads"),
         {
           status: "new",
@@ -144,6 +146,8 @@ export default function FoundingHostApplication() {
         );
       }
 
+      setSubmittedLeadId(leadDocument.id);
+      setSubmittedEmail(form.email.trim().toLowerCase());
       setSubmitted(true);
     } catch (err) {
       console.error(
@@ -187,16 +191,29 @@ export default function FoundingHostApplication() {
           </p>
 
           <p className="mt-3 text-lg leading-8 text-slate-600">
-            We&apos;ll review your location and charger status.
-            If your area is a good fit for the Founding Host
-            network, we&apos;ll invite you to complete your full
-            Host profile and charger setup.
+            You can continue your Founding Host setup now. We&apos;ll
+            review your completed information before your charger can
+            ever become active or bookable on KIVO.
           </p>
 
         </div>
 
+        <a
+          href={`/host/onboarding/start?lead=${encodeURIComponent(
+            submittedLeadId
+          )}&email=${encodeURIComponent(submittedEmail)}`}
+          className="mt-7 inline-flex w-full items-center justify-center rounded-full bg-emerald-400 px-7 py-4 text-lg font-black text-slate-950 transition hover:bg-emerald-300"
+        >
+          Continue my Host setup →
+        </a>
+
+        <p className="mt-4 text-center text-sm leading-6 text-slate-500">
+          We&apos;ll securely confirm your email before opening your
+          private Host setup.
+        </p>
+
         <p className="mt-6 text-base leading-7 text-slate-500">
-          Nothing has been listed publicly and applying does not
+          Nothing has been listed publicly and continuing does not
           commit you to hosting.
         </p>
 

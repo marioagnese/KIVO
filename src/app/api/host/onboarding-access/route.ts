@@ -66,12 +66,23 @@ export async function POST(request: Request) {
       .trim()
       .toLowerCase();
 
+    const allowedStatuses = [
+      "new",
+      "qualified",
+      "invited",
+    ];
+
     if (
       invitedEmail !== authenticatedEmail ||
-      lead.status !== "invited"
+      !allowedStatuses.includes(
+        String(lead.status ?? "")
+      )
     ) {
       return NextResponse.json(
-        { error: "This invitation is not valid for the signed-in account." },
+        {
+          error:
+            "This Founding Host application is not available for the signed-in account.",
+        },
         { status: 403 }
       );
     }

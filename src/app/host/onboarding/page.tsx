@@ -44,7 +44,7 @@ export default function HostOnboardingPage() {
     const leadId = params.get("lead");
 
     if (!leadId) {
-      setError("This Host invitation is missing its lead reference.");
+      setError("This Founding Host application is missing its reference.");
       setStatus("error");
       return;
     }
@@ -69,12 +69,12 @@ export default function HostOnboardingPage() {
       }
 
       setError(
-        "Open the secure invitation link from the email KIVO sent you."
+        "Sign in through your Founding Host application to continue."
       );
       setStatus("error");
     } catch (err) {
       console.error("KIVO Host onboarding initialization failed:", err);
-      setError("We couldn't validate this Host invitation.");
+      setError("We couldn't validate this Founding Host application.");
       setStatus("error");
     }
   }
@@ -90,7 +90,7 @@ export default function HostOnboardingPage() {
     const leadId = params.get("lead");
 
     if (!leadId) {
-      setError("This Host invitation is missing its lead reference.");
+      setError("This Founding Host application is missing its reference.");
       setStatus("error");
       return;
     }
@@ -142,7 +142,7 @@ export default function HostOnboardingPage() {
 
     if (!response.ok) {
       throw new Error(
-        result?.error || "Unable to validate this Host invitation."
+        result?.error || "Unable to validate this Founding Host application."
       );
     }
 
@@ -179,7 +179,7 @@ export default function HostOnboardingPage() {
           </p>
 
           <h1 className="mt-4 text-3xl font-black">
-            Checking your secure invitation...
+            Opening your secure Host setup...
           </h1>
         </div>
       </main>
@@ -249,7 +249,7 @@ export default function HostOnboardingPage() {
           </p>
 
           <h1 className="mt-4 text-4xl font-black">
-            We couldn't open this invitation.
+            We couldn't open this Host setup.
           </h1>
 
           <p className="mt-4 text-lg leading-8 text-slate-300">
@@ -270,7 +270,7 @@ export default function HostOnboardingPage() {
             </p>
 
             <p className="mt-1 text-sm text-slate-400">
-              Invitation confirmed for {lead.email}.
+              Host setup confirmed for {lead.email}.
             </p>
           </div>
         </div>
