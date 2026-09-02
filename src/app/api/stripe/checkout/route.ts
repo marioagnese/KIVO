@@ -274,6 +274,46 @@ export async function POST(
       stripeConnect?.payoutsReady ===
       true;
 
+    /*
+     * Snapshot KIVO marketplace economics when Checkout
+     * is created. Never recalculate an already-paid
+     * booking using a future commission policy.
+     *
+     * Founding Hosts originate from the curated
+     * Founding Host lifecycle and therefore carry a
+     * leadId in hostActivations.
+     */
+    const activationSnapshot =
+      await adminDb
+        .collection("hostActivations")
+        .doc(hostUid)
+        .get();
+
+    const activation =
+      activationSnapshot.data() ?? {};
+
+    const foundingLeadId =
+      typeof activation.leadId === "string"
+        ? activation.leadId.trim()
+        : "";
+
+    const isFoundingHost =
+      Boolean(foundingLeadId);
+
+    const commissionRate =
+      isFoundingHost
+        ? 0
+        : 0.05;
+
+    const commissionAmount =
+      Math.round(
+        amount * commissionRate
+      );
+
+    const hostAmount =
+      amount - commissionAmount;
+
+
     if (
       !stripeAccountId ||
       !payoutsReady
@@ -444,6 +484,24 @@ export async function POST(
 
           checkoutStatus:
             "created",
+
+          economics: {
+            grossAmount:
+              amount,
+
+            commissionRate,
+
+            commissionAmount,
+
+            hostAmount,
+
+            foundingHost:
+              isFoundingHost,
+
+            foundingLeadId:
+              foundingLeadId ||
+              null,
+          },
         },
       },
       { merge: true }

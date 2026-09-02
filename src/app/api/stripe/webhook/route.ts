@@ -196,6 +196,43 @@ export async function POST(
         );
 
     try {
+      const paymentIntentId =
+        typeof session.payment_intent ===
+          "string"
+          ? session.payment_intent
+          : session.payment_intent?.id ??
+            null;
+
+      if (!paymentIntentId) {
+        throw new Error(
+          "Paid KIVO Checkout Session does not have a PaymentIntent."
+        );
+      }
+
+      /*
+       * Resolve Stripe's successful Charge before entering
+       * the Firestore transaction. Firestore transaction
+       * callbacks may be retried, so external Stripe API
+       * calls must stay outside that callback.
+       */
+      const paymentIntent =
+        await stripe.paymentIntents.retrieve(
+          paymentIntentId
+        );
+
+      const chargeId =
+        typeof paymentIntent.latest_charge ===
+          "string"
+          ? paymentIntent.latest_charge
+          : paymentIntent.latest_charge?.id ??
+            null;
+
+      if (!chargeId) {
+        throw new Error(
+          "Paid KIVO PaymentIntent does not have a successful Stripe Charge."
+        );
+      }
+
       await adminDb.runTransaction(
         async (
           transaction
@@ -365,17 +402,6 @@ export async function POST(
             );
           }
 
-          const paymentIntentId =
-            typeof session
-              .payment_intent ===
-              "string"
-              ? session
-                  .payment_intent
-              : session
-                  .payment_intent
-                  ?.id ??
-                null;
-
           transaction.update(
             bookingRef,
             {
@@ -391,6 +417,9 @@ export async function POST(
 
               "stripePayment.paymentIntentId":
                 paymentIntentId,
+
+              "stripePayment.chargeId":
+                chargeId,
 
               "stripePayment.stripeEventId":
                 event.id,
