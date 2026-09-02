@@ -6,7 +6,11 @@ import {
   adminDb,
 } from "@/lib/firebaseAdmin";
 
-import { stripe } from "@/lib/stripe";
+import {
+  stripe,
+  stripeConnectProfileKey,
+  stripeMode,
+} from "@/lib/stripe";
 
 export async function POST(request: Request) {
   try {
@@ -69,9 +73,42 @@ export async function POST(request: Request) {
     const profile =
       profileSnapshot.data() ?? {};
 
+    const selectedStripeConnect =
+      profile[
+        stripeConnectProfileKey
+      ] &&
+      typeof profile[
+        stripeConnectProfileKey
+      ] === "object"
+        ? profile[
+            stripeConnectProfileKey
+          ]
+        : null;
+
+    /*
+     * Existing KIVO sandbox Hosts were originally
+     * stored in profile.stripeConnect.
+     *
+     * Test mode may use that legacy record as a
+     * migration fallback.
+     *
+     * Live mode NEVER falls back to the sandbox
+     * account.
+     */
+    const legacyTestStripeConnect =
+      stripeMode === "test" &&
+      profile.stripeConnect &&
+      typeof profile.stripeConnect ===
+        "object"
+        ? profile.stripeConnect
+        : null;
+
     let stripeAccountId =
       String(
-        profile.stripeConnect?.accountId ??
+        selectedStripeConnect
+          ?.accountId ??
+        legacyTestStripeConnect
+          ?.accountId ??
         ""
       ).trim();
 
@@ -133,12 +170,15 @@ export async function POST(request: Request) {
           ownerUid:
             decoded.uid,
 
-          stripeConnect: {
+          [stripeConnectProfileKey]: {
             accountId:
               stripeAccountId,
 
             accountVersion:
               "v2",
+
+            mode:
+              stripeMode,
 
             onboardingStatus:
               "started",

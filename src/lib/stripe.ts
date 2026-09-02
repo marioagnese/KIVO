@@ -9,5 +9,18 @@ if (!stripeSecretKey) {
   );
 }
 
+export const stripeMode:
+  "test" | "live" =
+  stripeSecretKey.startsWith(
+    "sk_live_"
+  )
+    ? "live"
+    : "test";
+
+export const stripeConnectProfileKey =
+  stripeMode === "live"
+    ? "stripeConnectLive"
+    : "stripeConnectTest";
+
 export const stripe =
   new Stripe(stripeSecretKey);

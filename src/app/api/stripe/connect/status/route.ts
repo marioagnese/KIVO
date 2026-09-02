@@ -6,7 +6,11 @@ import {
   adminDb,
 } from "@/lib/firebaseAdmin";
 
-import { stripe } from "@/lib/stripe";
+import {
+  stripe,
+  stripeConnectProfileKey,
+  stripeMode,
+} from "@/lib/stripe";
 
 export async function GET(request: Request) {
   try {
@@ -69,9 +73,32 @@ export async function GET(request: Request) {
     const profile =
       profileSnapshot.data() ?? {};
 
+    const selectedStripeConnect =
+      profile[
+        stripeConnectProfileKey
+      ] &&
+      typeof profile[
+        stripeConnectProfileKey
+      ] === "object"
+        ? profile[
+            stripeConnectProfileKey
+          ]
+        : null;
+
+    const legacyTestStripeConnect =
+      stripeMode === "test" &&
+      profile.stripeConnect &&
+      typeof profile.stripeConnect ===
+        "object"
+        ? profile.stripeConnect
+        : null;
+
     const stripeAccountId =
       String(
-        profile.stripeConnect?.accountId ??
+        selectedStripeConnect
+          ?.accountId ??
+        legacyTestStripeConnect
+          ?.accountId ??
         ""
       ).trim();
 
@@ -124,12 +151,15 @@ export async function GET(request: Request) {
 
     await profileRef.set(
       {
-        stripeConnect: {
+        [stripeConnectProfileKey]: {
           accountId:
             stripeAccountId,
 
           accountVersion:
             "v2",
+
+          mode:
+            stripeMode,
 
           onboardingStatus:
             status,
