@@ -326,14 +326,57 @@ export async function POST(request: Request) {
         activationSnapshot.data() ??
         {};
 
+      const entitlement =
+        activation.commissionEntitlement &&
+        typeof activation.commissionEntitlement ===
+          "object"
+          ? activation.commissionEntitlement as Record<
+              string,
+              unknown
+            >
+          : null;
+
+      const entitlementType =
+        String(
+          entitlement?.type ??
+          ""
+        ).trim();
+
+      const entitlementSource =
+        String(
+          entitlement?.source ??
+          ""
+        ).trim();
+
+      const entitlementRate =
+        Number(
+          entitlement?.rate
+        );
+
+      const foundingHostNumber =
+        Number(
+          activation.foundingHostNumber ??
+          0
+        );
+
+      foundingHost =
+        activation.foundingHost === true &&
+        entitlementType ===
+          "lifetime" &&
+        entitlementSource ===
+          "founding_host_cohort" &&
+        entitlementRate === 0 &&
+        Number.isInteger(
+          foundingHostNumber
+        ) &&
+        foundingHostNumber >= 1 &&
+        foundingHostNumber <= 200;
+
       const leadId =
         typeof activation.leadId ===
           "string"
           ? activation.leadId.trim()
           : "";
-
-      foundingHost =
-        Boolean(leadId);
 
       foundingLeadId =
         leadId ||

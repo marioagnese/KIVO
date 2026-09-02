@@ -96,75 +96,290 @@ export async function POST(request: Request) {
     const activationRef =
       adminDb.collection("hostActivations").doc(uid);
 
-    const activationSnapshot =
-      await activationRef.get();
+    /*
+     * FOUNDING HOST ECONOMIC ENTITLEMENT
+     *
+     * The first 200 approved Founding Hosts receive
+     * 0% KIVO commission for life.
+     *
+     * Allocation happens inside a Firestore transaction
+     * so concurrent approvals cannot issue the same
+     * Founding Host number or exceed the 200-Host cap.
+     *
+     * Once granted, this entitlement is permanent and
+     * must never be inferred later from leadId alone.
+     */
+    const foundingCounterRef =
+      adminDb
+        .collection("platformConfig")
+        .doc("foundingHosts");
 
-    const activationSeed = {
-      uid,
+    await adminDb.runTransaction(
+      async (transaction) => {
+        const [
+          currentOnboardingSnapshot,
+          currentActivationSnapshot,
+          foundingCounterSnapshot,
+        ] =
+          await Promise.all([
+            transaction.get(
+              onboardingRef
+            ),
 
-      leadId:
-        typeof onboarding.leadId === "string"
-          ? onboarding.leadId
-          : null,
+            transaction.get(
+              activationRef
+            ),
 
-      status: "activation_in_progress",
+            transaction.get(
+              foundingCounterRef
+            ),
+          ]);
 
-      gates: {
-        safety: {
-          status: "not_started",
-        },
+        if (
+          !currentOnboardingSnapshot.exists
+        ) {
+          throw new Error(
+            "Host onboarding record disappeared during approval."
+          );
+        }
 
-        propertyAccess: {
-          status: "not_started",
-        },
+        const currentOnboarding =
+          currentOnboardingSnapshot.data() ??
+          {};
 
-        charger: {
-          status: "not_started",
-        },
+        const currentActivation =
+          currentActivationSnapshot.data() ??
+          {};
 
-        legal: {
-          status: "not_started",
-        },
+        /*
+         * Existing entitlement always wins.
+         * Re-approving a Host must never consume another
+         * Founding Host number.
+         */
+        const existingFoundingNumber =
+          Number(
+            currentActivation
+              .foundingHostNumber ??
+              0
+          );
 
-        listing: {
-          status: "not_started",
-        },
-      },
+        const alreadyFounding =
+          currentActivation
+            .foundingHost === true &&
+          Number.isInteger(
+            existingFoundingNumber
+          ) &&
+          existingFoundingNumber >= 1 &&
+          existingFoundingNumber <= 200;
 
-      blockers: [],
+        let foundingHost =
+          alreadyFounding;
 
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    };
+        let foundingHostNumber:
+          number | null =
+          alreadyFounding
+            ? existingFoundingNumber
+            : null;
 
-    if (onboarding.status !== "approved") {
-      const batch = adminDb.batch();
+        /*
+         * Only the curated Founding Host funnel is
+         * eligible for one of the first 200 slots.
+         */
+        const foundingLeadId =
+          typeof currentOnboarding
+            .leadId === "string"
+            ? currentOnboarding
+                .leadId
+                .trim()
+            : "";
 
-      batch.set(
-        onboardingRef,
-        {
-          status: "approved",
-          approvedAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        },
-        { merge: true }
-      );
+        if (
+          !alreadyFounding &&
+          foundingLeadId
+        ) {
+          const counterData =
+            foundingCounterSnapshot.data() ??
+            {};
 
-      if (!activationSnapshot.exists) {
-        batch.set(
+          const currentCount =
+            Number(
+              counterData.approvedCount ??
+              0
+            );
+
+          if (
+            Number.isInteger(
+              currentCount
+            ) &&
+            currentCount >= 0 &&
+            currentCount < 200
+          ) {
+            foundingHost = true;
+            foundingHostNumber =
+              currentCount + 1;
+
+            transaction.set(
+              foundingCounterRef,
+              {
+                approvedCount:
+                  foundingHostNumber,
+
+                cap: 200,
+
+                status:
+                  foundingHostNumber >=
+                  200
+                    ? "closed"
+                    : "open",
+
+                updatedAt:
+                  FieldValue.serverTimestamp(),
+              },
+              { merge: true }
+            );
+          }
+        }
+
+        const commissionPlan =
+          foundingHost
+            ? "founding_lifetime_zero"
+            : "standard";
+
+        const commissionRate =
+          foundingHost
+            ? 0
+            : 0.05;
+
+        transaction.set(
+          onboardingRef,
+          {
+            status: "approved",
+
+            approvedAt:
+              currentOnboarding
+                .approvedAt ??
+              FieldValue.serverTimestamp(),
+
+            foundingHost,
+
+            foundingHostNumber,
+
+            commissionPlan,
+
+            updatedAt:
+              FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        /*
+         * Preserve all existing activation progress.
+         * Only seed gates when the activation record
+         * does not already exist.
+         */
+        const activationSeed =
+          currentActivationSnapshot.exists
+            ? {}
+            : {
+                uid,
+
+                status:
+                  "activation_in_progress",
+
+                gates: {
+                  safety: {
+                    status:
+                      "not_started",
+                  },
+
+                  propertyAccess: {
+                    status:
+                      "not_started",
+                  },
+
+                  charger: {
+                    status:
+                      "not_started",
+                  },
+
+                  legal: {
+                    status:
+                      "not_started",
+                  },
+
+                  listing: {
+                    status:
+                      "not_started",
+                  },
+                },
+
+                blockers: [],
+
+                createdAt:
+                  FieldValue.serverTimestamp(),
+              };
+
+        transaction.set(
           activationRef,
-          activationSeed
+          {
+            ...activationSeed,
+
+            leadId:
+              foundingLeadId ||
+              currentActivation
+                .leadId ||
+              null,
+
+            foundingHost,
+
+            foundingHostNumber,
+
+            commissionPlan,
+
+            commissionRate,
+
+            commissionEntitlement:
+              foundingHost
+                ? {
+                    type:
+                      "lifetime",
+
+                    rate: 0,
+
+                    source:
+                      "founding_host_cohort",
+
+                    foundingHostNumber,
+
+                    grantedAt:
+                      currentActivation
+                        .commissionEntitlement
+                        ?.grantedAt ??
+                      FieldValue.serverTimestamp(),
+                  }
+                : {
+                    type:
+                      "standard",
+
+                    rate: 0.05,
+
+                    source:
+                      "standard_host",
+
+                    grantedAt:
+                      currentActivation
+                        .commissionEntitlement
+                        ?.grantedAt ??
+                      FieldValue.serverTimestamp(),
+                  },
+
+            updatedAt:
+              FieldValue.serverTimestamp(),
+          },
+          { merge: true }
         );
       }
-
-      await batch.commit();
-    } else if (!activationSnapshot.exists) {
-      // Backfill Hosts approved before the activation layer existed.
-      // Never overwrite an existing activation record.
-      await activationRef.set(
-        activationSeed
-      );
-    }
+    );
 
     // --------------------------------------------------------
     // APPROVAL EMAILS
