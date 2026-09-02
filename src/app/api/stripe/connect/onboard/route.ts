@@ -133,6 +133,22 @@ export async function POST(request: Request) {
           },
 
           configuration: {
+            /*
+             * Stripe Accounts v2 requires the merchant
+             * card_payments capability whenever recipient
+             * stripe_transfers is requested.
+             *
+             * KIVO still uses platform charges followed by
+             * separate transfers to Hosts.
+             */
+            merchant: {
+              capabilities: {
+                card_payments: {
+                  requested: true,
+                },
+              },
+            },
+
             recipient: {
               capabilities: {
                 stripe_balance: {
@@ -223,6 +239,7 @@ export async function POST(request: Request) {
 
           account_onboarding: {
             configurations: [
+              "merchant",
               "recipient",
             ],
 
