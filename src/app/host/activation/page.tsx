@@ -47,6 +47,7 @@ type ActivationData = {
       streetAddress: string;
       unit: string;
       city: string;
+      country: string;
       state: string;
       postalCode: string;
       authority: string;
@@ -132,6 +133,9 @@ export default function HostActivationPage() {
 
   const [city, setCity] =
     useState("");
+
+  const [propertyCountry, setPropertyCountry] =
+    useState<"US" | "CA">("US");
 
   const [propertyState, setPropertyState] =
     useState("");
@@ -680,6 +684,9 @@ export default function HostActivationPage() {
     );
     setUnit(saved?.unit || "");
     setCity(saved?.city || "");
+    setPropertyCountry(
+      saved?.country === "CA" ? "CA" : "US"
+    );
     setPropertyState(saved?.state || "");
     setPropertyPostalCode(
       saved?.postalCode ||
@@ -767,6 +774,8 @@ export default function HostActivationPage() {
               unit.trim(),
             city:
               city.trim(),
+            country:
+              propertyCountry,
             state:
               propertyState.trim(),
             postalCode:
@@ -810,6 +819,8 @@ export default function HostActivationPage() {
                     unit.trim(),
                   city:
                     city.trim(),
+                  country:
+                    propertyCountry,
                   state:
                     propertyState
                       .trim()
@@ -1750,7 +1761,7 @@ export default function HostActivationPage() {
 
             <ActivationCard
               title="Payout setup"
-              description="Connect Stripe securely so KIVO can send your charging earnings to you."
+              description="Set up Stripe when you're ready. Payout setup is required before your Host listing can go live and receive paid charging requests."
               status={data.activation.gates.payouts.status}
               onClick={() => {
                 if (
@@ -2565,7 +2576,38 @@ export default function HostActivationPage() {
 
                 <label>
                   <span className="text-sm font-black text-slate-200">
-                    State *
+                    Country *
+                  </span>
+
+                  <select
+                    value={propertyCountry}
+                    onChange={(event) => {
+                      const nextCountry =
+                        event.target.value === "CA"
+                          ? "CA"
+                          : "US";
+
+                      setPropertyCountry(nextCountry);
+                      setPropertyState("");
+                      setPropertyPostalCode("");
+                    }}
+                    autoComplete="country"
+                    className="mt-2 w-full rounded-2xl border border-white/10 bg-[#07111f] px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  >
+                    <option value="US">
+                      United States
+                    </option>
+                    <option value="CA">
+                      Canada
+                    </option>
+                  </select>
+                </label>
+
+                <label>
+                  <span className="text-sm font-black text-slate-200">
+                    {propertyCountry === "CA"
+                      ? "Province *"
+                      : "State *"}
                   </span>
 
                   <input
@@ -2574,7 +2616,11 @@ export default function HostActivationPage() {
                       setPropertyState(event.target.value)
                     }
                     maxLength={2}
-                    placeholder="TX"
+                    placeholder={
+                      propertyCountry === "CA"
+                        ? "ON"
+                        : "TX"
+                    }
                     autoComplete="address-level1"
                     className="mt-2 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 uppercase text-white outline-none focus:border-emerald-400"
                   />
@@ -2582,7 +2628,9 @@ export default function HostActivationPage() {
 
                 <label>
                   <span className="text-sm font-black text-slate-200">
-                    ZIP code *
+                    {propertyCountry === "CA"
+                      ? "Postal code *"
+                      : "ZIP code *"}
                   </span>
 
                   <input

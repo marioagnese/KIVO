@@ -51,6 +51,17 @@ export async function POST(request: Request) {
       String(body.unit ?? "").trim();
     const city =
       String(body.city ?? "").trim();
+
+    const countryRaw =
+      String(body.country ?? "")
+        .trim()
+        .toUpperCase();
+
+    const country =
+      countryRaw === "CA" ? "CA" :
+      countryRaw === "US" ? "US" :
+      "";
+
     const state =
       String(body.state ?? "").trim().toUpperCase();
     const postalCode =
@@ -69,6 +80,7 @@ export async function POST(request: Request) {
     if (
       !streetAddress ||
       !city ||
+      !country ||
       !state ||
       !postalCode ||
       !authority
@@ -151,6 +163,7 @@ export async function POST(request: Request) {
           streetAddress,
           unit,
           city,
+          country,
           state,
           postalCode,
           authority,
