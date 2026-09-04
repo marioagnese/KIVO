@@ -179,6 +179,11 @@ export async function POST(request: Request) {
             String(
               activation.privateProperty?.city ?? ""
             ),
+          country:
+            String(
+              activation.privateProperty?.country ??
+                "US"
+            ),
           state:
             String(
               activation.privateProperty?.state ?? ""

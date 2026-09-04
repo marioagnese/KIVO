@@ -150,6 +150,42 @@ export async function POST(request: Request) {
         ""
       ).trim();
 
+    /*
+     * Stripe connected-account country must be known
+     * before the Account is created. KIVO uses the
+     * Host's confirmed private-property country as the
+     * authoritative source.
+     */
+    const activationSnapshot =
+      await adminDb
+        .collection("hostActivations")
+        .doc(decoded.uid)
+        .get();
+
+    const activationData =
+      activationSnapshot.data() ?? {};
+
+    const hostCountry =
+      String(
+        activationData.privateProperty?.country ??
+          ""
+      )
+        .trim()
+        .toUpperCase();
+
+    if (
+      hostCountry !== "US" &&
+      hostCountry !== "CA"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Confirm your Host property country before setting up payouts.",
+        },
+        { status: 400 }
+      );
+    }
+
     if (!stripeAccountId) {
       const account =
         await stripe.v2.core.accounts.create({
@@ -167,7 +203,7 @@ export async function POST(request: Request) {
           dashboard: "express",
 
           identity: {
-            country: "US",
+            country: hostCountry,
           },
 
           configuration: {
@@ -236,6 +272,9 @@ export async function POST(request: Request) {
 
             onboardingStatus:
               "started",
+
+            country:
+              hostCountry,
 
             createdAt:
               FieldValue.serverTimestamp(),
