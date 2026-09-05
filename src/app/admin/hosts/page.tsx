@@ -200,55 +200,6 @@ export default function AdminHostsPage() {
     }
   }
 
-  async function inviteLead(lead: FoundingHostLead) {
-    if (!db || !auth?.currentUser) {
-      setError("KIVO admin authentication is unavailable.");
-      return;
-    }
-
-    setUpdatingId(lead.id);
-    setError("");
-
-    try {
-      const idToken = await auth.currentUser.getIdToken(true);
-
-      const response = await fetch("/api/admin/host-invitation", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          leadId: lead.id,
-          name: lead.name,
-          email: lead.email,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result?.error || "Unable to send Host invitation."
-        );
-      }
-
-      await updateDoc(doc(db, "foundingHostLeads", lead.id), {
-        status: "invited",
-        invitedAt: serverTimestamp(),
-        invitationEmailSentAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.error("Unable to invite Founding Host lead:", err);
-      setError(
-        "The Host invitation could not be completed. The lead was not marked invited."
-      );
-    } finally {
-      setUpdatingId(null);
-    }
-  }
-
   async function handleSignOut() {
     if (!auth) {
       return;
@@ -434,15 +385,6 @@ export default function AdminHostsPage() {
                               className="rounded-full bg-emerald-400 px-5 py-2.5 text-base font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                               {isUpdating ? "Updating..." : "Qualify"}
-                            </button>
-                          ) : isQualified ? (
-                            <button
-                              type="button"
-                              disabled={isUpdating}
-                              onClick={() => inviteLead(lead)}
-                              className="rounded-full bg-cyan-300 px-5 py-2.5 text-base font-black text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {isUpdating ? "Updating..." : "Invite"}
                             </button>
                           ) : (
                             <span className="text-base font-semibold text-slate-600">
