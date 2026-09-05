@@ -632,7 +632,7 @@ export default function HostOnboardingApplication({
           </h1>
 
           <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-300 sm:text-xl">
-            You’ve been invited to continue as a KIVO Founding Host. We’ll keep
+            Continue your KIVO Founding Host setup. We’ll keep
             this simple and only ask for what we need to understand your charger
             and how Drivers would access it.
           </p>
