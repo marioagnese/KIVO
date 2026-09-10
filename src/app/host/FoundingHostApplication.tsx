@@ -91,6 +91,26 @@ export default function FoundingHostApplication() {
     setSubmitting(true);
 
     try {
+      const params =
+        new URLSearchParams(window.location.search);
+
+      const attribution = {
+        utmSource:
+          params.get("utm_source")?.trim() ?? "",
+        utmMedium:
+          params.get("utm_medium")?.trim() ?? "",
+        utmCampaign:
+          params.get("utm_campaign")?.trim() ?? "",
+        utmContent:
+          params.get("utm_content")?.trim() ?? "",
+        utmTerm:
+          params.get("utm_term")?.trim() ?? "",
+        fbclid:
+          params.get("fbclid")?.trim() ?? "",
+        referrer:
+          document.referrer ?? "",
+      };
+
       const leadDocument = await addDoc(
         collection(db, "foundingHostLeads"),
         {
@@ -106,6 +126,8 @@ export default function FoundingHostApplication() {
 
           source: "kivo-host-acquisition-page",
           foundingHost: true,
+
+          attribution,
 
           createdAt: serverTimestamp(),
         }
