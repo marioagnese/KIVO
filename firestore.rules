@@ -177,6 +177,7 @@ service cloud.firestore {
             "chargerStatus",
             "source",
             "foundingHost",
+            "attribution",
             "createdAt"
           ])
 
@@ -186,6 +187,26 @@ service cloud.firestore {
               == "kivo-host-acquisition-page"
 
           && request.resource.data.foundingHost == true
+
+          // Marketing attribution.
+          && request.resource.data.attribution is map
+          && request.resource.data.attribution.keys().hasOnly([
+            "utmSource",
+            "utmMedium",
+            "utmCampaign",
+            "utmContent",
+            "utmTerm",
+            "fbclid",
+            "referrer"
+          ])
+
+          && request.resource.data.attribution.utmSource is string
+          && request.resource.data.attribution.utmMedium is string
+          && request.resource.data.attribution.utmCampaign is string
+          && request.resource.data.attribution.utmContent is string
+          && request.resource.data.attribution.utmTerm is string
+          && request.resource.data.attribution.fbclid is string
+          && request.resource.data.attribution.referrer is string
 
 
           // Name.
