@@ -8,6 +8,8 @@ import {
   AuthProvider,
 } from "@/context/AuthContext";
 
+import MetaPixel from "./MetaPixel";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -37,6 +39,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
+        <MetaPixel />
         <AuthProvider>
           {children}
         </AuthProvider>

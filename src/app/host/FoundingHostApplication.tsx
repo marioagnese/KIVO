@@ -168,6 +168,20 @@ export default function FoundingHostApplication() {
         );
       }
 
+      if (
+        typeof window !== "undefined" &&
+        typeof window.fbq === "function"
+      ) {
+        window.fbq("track", "Lead");
+      }
+
+      if (
+        typeof window !== "undefined" &&
+        typeof window.fbq === "function"
+      ) {
+        window.fbq("track", "Lead");
+      }
+
       setSubmittedLeadId(leadDocument.id);
       setSubmittedEmail(form.email.trim().toLowerCase());
       setSubmitted(true);
