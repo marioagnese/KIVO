@@ -299,6 +299,10 @@ service cloud.firestore {
         && request.resource.data.createdAt
             == resource.data.createdAt
 
+        // Preserve applicant attribution metadata.
+        && request.resource.data.attribution
+            == resource.data.attribution
+
 
         // Lifecycle states supported during Founding Host phase.
         && request.resource.data.status in [
@@ -307,7 +311,8 @@ service cloud.firestore {
           "invited",
           "hold",
           "not_qualified",
-          "withdrawn"
+          "withdrawn",
+          "active"
         ]
 
 
