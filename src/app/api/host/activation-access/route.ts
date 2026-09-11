@@ -163,7 +163,8 @@ export async function POST(request: Request) {
 
         account: {
           passwordConfigured:
-            activation.account?.passwordConfigured === true,
+            activation.account?.passwordConfigured === true ||
+            String(onboarding.status ?? "") === "approved",
         },
 
         propertyConfirmation: {

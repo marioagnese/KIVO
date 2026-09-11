@@ -329,6 +329,12 @@ export async function POST(request: Request) {
           {
             ...activationSeed,
 
+            // Host creates/signs into the KIVO account before onboarding.
+            // Approval must not ask them to create another password.
+            account: {
+              passwordConfigured: true,
+            },
+
             leadId:
               foundingLeadId ||
               currentActivation
