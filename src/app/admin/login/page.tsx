@@ -29,7 +29,7 @@ export default function AdminLoginPage() {
       currentUser.email?.toLowerCase() === ADMIN_EMAIL &&
       currentUser.emailVerified
     ) {
-      window.location.href = "/admin/hosts";
+      window.location.href = "/admin";
     }
   }, []);
 
@@ -83,7 +83,7 @@ export default function AdminLoginPage() {
         return;
       }
 
-      window.location.href = "/admin/hosts";
+      window.location.href = "/admin";
     } catch (err: any) {
       const code = String(err?.code || "");
 

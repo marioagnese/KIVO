@@ -1,57 +1,80 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import {
   collection,
-  doc,
   onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  type Timestamp,
 } from "firebase/firestore";
 
 import { auth, db } from "@/lib/firebase";
-import OnboardingReviewQueue from "./OnboardingReviewQueue";
-import ActivationReadinessQueue from "./ActivationReadinessQueue";
-import DriverVerificationQueue from "./DriverVerificationQueue";
 
 const ADMIN_EMAIL = "admin@kivocharge.com";
 
-type FoundingHostLead = {
-  id: string;
+type HostRecord = {
+  uid: string;
   name: string;
-  phone: string;
   email: string;
   postalCode: string;
-  parkingSetup: string;
-  chargerStatus: string;
   status: string;
-  foundingHost: boolean;
-  source: string;
-  createdAt?: Timestamp | null;
+  activationStatus: string;
 };
 
-function formatDate(timestamp?: Timestamp | null) {
-  if (!timestamp) {
-    return "—";
+type ActivationRecord = {
+  uid: string;
+  status: string;
+  gates: Record<
+    string,
+    {
+      status?: string;
+    }
+  >;
+};
+
+
+function prettyStatus(value?: string) {
+  return String(value || "not_started")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const REQUIRED_HOST_GATES = [
+  "safety",
+  "propertyAccess",
+  "charger",
+  "legal",
+  "listing",
+  "payouts",
+] as const;
+
+function statusNeedsAttention(value?: string) {
+  return value === "failed" || value === "needs_changes";
+}
+
+function allRequiredGatesComplete(
+  activation?: ActivationRecord
+) {
+  if (!activation) {
+    return false;
   }
 
-  return timestamp.toDate().toLocaleString();
+  return REQUIRED_HOST_GATES.every(
+    (gateName) =>
+      activation.gates?.[gateName]?.status === "complete"
+  );
 }
 
 export default function AdminHostsPage() {
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [leads, setLeads] = useState<FoundingHostLead[]>([]);
-  const [loadingLeads, setLoadingLeads] = useState(true);
 
-  const [activeHostEmails, setActiveHostEmails] =
-    useState<Set<string>>(new Set());
+  const [hosts, setHosts] = useState<HostRecord[]>([]);
+  const [activations, setActivations] = useState<ActivationRecord[]>([]);
+  const [loadingHosts, setLoadingHosts] = useState(true);
+  const [loadingActivations, setLoadingActivations] = useState(true);
+
   const [error, setError] = useState("");
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!auth) {
@@ -87,123 +110,137 @@ export default function AdminHostsPage() {
   }, []);
 
   useEffect(() => {
-    if (!user || !db) {
-      return;
-    }
-
-    const leadsQuery = query(
-      collection(db, "foundingHostLeads"),
-      orderBy("createdAt", "desc")
-    );
-
-    const unsubscribe = onSnapshot(
-      leadsQuery,
-      (snapshot) => {
-        const nextLeads: FoundingHostLead[] = snapshot.docs.map((leadDoc) => {
-          const data = leadDoc.data();
-
-          return {
-            id: leadDoc.id,
-            name: String(data.name ?? ""),
-            phone: String(data.phone ?? ""),
-            email: String(data.email ?? ""),
-            postalCode: String(data.postalCode ?? ""),
-            parkingSetup: String(data.parkingSetup ?? ""),
-            chargerStatus: String(data.chargerStatus ?? ""),
-            status: String(data.status ?? "new"),
-            foundingHost: Boolean(data.foundingHost),
-            source: String(data.source ?? ""),
-            createdAt: data.createdAt ?? null,
-          };
-        });
-
-        setLeads(nextLeads);
-        setLoadingLeads(false);
-        setError("");
-      },
-      (err) => {
-        console.error("Unable to load Founding Host leads:", err);
-        setError(
-          "Unable to load Founding Host applications. Check admin permissions."
-        );
-        setLoadingLeads(false);
-      }
-    );
-
-    return unsubscribe;
-  }, [user]);
-
-  useEffect(() => {
-    if (!user || !db) {
-      return;
-    }
+    if (!user || !db) return;
 
     return onSnapshot(
       collection(db, "hostOnboarding"),
       (snapshot) => {
-        const next =
-          new Set<string>();
+        const nextHosts: HostRecord[] = snapshot.docs.map((recordDoc) => {
+          const data = recordDoc.data();
 
-        for (const recordDoc of snapshot.docs) {
-          const data =
-            recordDoc.data();
+          return {
+            uid: recordDoc.id,
+            name: String(data.name ?? ""),
+            email: String(data.email ?? ""),
+            postalCode: String(data.postalCode ?? ""),
+            status: String(data.status ?? ""),
+            activationStatus: String(data.activationStatus ?? ""),
+          };
+        });
 
-          if (
-            String(
-              data.activationStatus ?? ""
-            ) !== "active"
-          ) {
-            continue;
-          }
-
-          const email =
-            String(data.email ?? "")
-              .trim()
-              .toLowerCase();
-
-          if (email) {
-            next.add(email);
-          }
-        }
-
-        setActiveHostEmails(next);
+        setHosts(nextHosts);
+        setLoadingHosts(false);
       },
-      (err) => {
-        console.error(
-          "Unable to load active Host lifecycle status:",
-          err
-        );
+      (snapshotError) => {
+        console.error("Unable to load Host records:", snapshotError);
+        setError("Unable to load Host records.");
+        setLoadingHosts(false);
       }
     );
   }, [user]);
 
-  async function qualifyLead(leadId: string) {
-    if (!db) {
-      setError("Firestore is unavailable.");
-      return;
-    }
+  useEffect(() => {
+    if (!user || !db) return;
 
-    setUpdatingId(leadId);
-    setError("");
+    return onSnapshot(
+      collection(db, "hostActivations"),
+      (snapshot) => {
+        const nextActivations: ActivationRecord[] =
+          snapshot.docs.map((recordDoc) => {
+            const data = recordDoc.data();
 
-    try {
-      await updateDoc(doc(db, "foundingHostLeads", leadId), {
-        status: "qualified",
-        qualifiedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    } catch (err) {
-      console.error("Unable to qualify Founding Host lead:", err);
-      setError("Unable to update this application.");
-    } finally {
-      setUpdatingId(null);
-    }
-  }
+            return {
+              uid: recordDoc.id,
+              status: String(
+                data.status ?? "activation_in_progress"
+              ),
+              gates: data.gates ?? {},
+            };
+          });
+
+        setActivations(nextActivations);
+        setLoadingActivations(false);
+      },
+      (snapshotError) => {
+        console.error(
+          "Unable to load Host activation records:",
+          snapshotError
+        );
+        setError("Unable to load Host activation records.");
+        setLoadingActivations(false);
+      }
+    );
+  }, [user]);
+
+
+  const activationByUid = useMemo(
+    () =>
+      Object.fromEntries(
+        activations.map((activation) => [
+          activation.uid,
+          activation,
+        ])
+      ),
+    [activations]
+  );
+
+  const activeHosts = useMemo(
+    () =>
+      hosts.filter((host) => {
+        const activation = activationByUid[host.uid];
+
+        return (
+          host.activationStatus === "active" ||
+          activation?.status === "active"
+        );
+      }),
+    [hosts, activationByUid]
+  );
+
+  const hostsNeedingAttention = useMemo(
+    () =>
+      hosts.filter((host) => {
+        const activation = activationByUid[host.uid];
+
+        if (!activation || activation.status === "active") {
+          return false;
+        }
+
+        const hasException =
+          Object.values(activation.gates ?? {}).some(
+            (gate) => statusNeedsAttention(gate?.status)
+          );
+
+        const readyForFinalActivation =
+          allRequiredGatesComplete(activation);
+
+        return hasException || readyForFinalActivation;
+      }),
+    [hosts, activationByUid]
+  );
+
+  const hostsInProgress = useMemo(
+    () =>
+      hosts.filter((host) => {
+        const activation = activationByUid[host.uid];
+
+        if (
+          host.activationStatus === "active" ||
+          activation?.status === "active"
+        ) {
+          return false;
+        }
+
+        return (
+          host.status === "approved" ||
+          Boolean(activation)
+        );
+      }),
+    [hosts, activationByUid]
+  );
 
   async function handleSignOut() {
-    if (!auth) {
-      return;
-    }
+    if (!auth) return;
 
     await signOut(auth);
     window.location.href = "/admin/login";
@@ -219,25 +256,34 @@ export default function AdminHostsPage() {
     );
   }
 
-  if (!user) {
-    return null;
-  }
+  if (!user) return null;
+
+  const loading =
+    loadingHosts || loadingActivations;
 
   return (
     <main className="min-h-screen bg-[#020817] px-4 py-8 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1500px]">
         <header className="mb-8 flex flex-col gap-5 border-b border-white/10 pb-7 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-400">
-              KIVO ADMIN
+            <Link
+              href="/admin"
+              className="text-sm font-bold text-emerald-300 hover:text-emerald-200"
+            >
+              ← Admin Home
+            </Link>
+
+            <p className="mt-5 text-sm font-black uppercase tracking-[0.22em] text-emerald-400">
+              KIVO HOST
             </p>
 
             <h1 className="mt-2 text-4xl font-black tracking-tight sm:text-5xl">
-              Founding Host Review
+              Host Operations
             </h1>
 
-            <p className="mt-3 text-base text-slate-400 sm:text-lg">
-              Review early Host applications and manage lifecycle status.
+            <p className="mt-3 max-w-3xl text-base text-slate-400 sm:text-lg">
+              Monitor active Hosts, exceptions and activation progress.
+              Routine onboarding should not require Admin intervention.
             </p>
           </div>
 
@@ -256,150 +302,316 @@ export default function AdminHostsPage() {
           </div>
         )}
 
-        <OnboardingReviewQueue />
-
-        <ActivationReadinessQueue />
-
-        <DriverVerificationQueue />
-
-        <div className="mb-5 flex items-center justify-between">
-          <div>
-            <p className="text-base font-bold text-slate-300">
-              Founding Host applications
+        <section className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-2xl border border-emerald-300/20 bg-emerald-300/[0.05] p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+              Active Hosts
             </p>
-            <p className="mt-2 text-base text-slate-500">
-              {leads.length} total lead{leads.length === 1 ? "" : "s"}
-            </p>
-          </div>
-        </div>
 
-        {loadingLeads ? (
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-sm text-slate-400">
-            Loading Founding Host applications...
-          </div>
-        ) : leads.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
-            <p className="font-bold">No applications yet.</p>
-            <p className="mt-2 text-sm text-slate-400">
-              New submissions from /host/apply will appear here.
+            <p className="mt-3 text-4xl font-black">
+              {loading ? "—" : activeHosts.length}
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Live on the KIVO marketplace
             </p>
           </div>
-        ) : (
-          <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
-            <div className="overflow-x-auto">
-              <table className="min-w-[1280px] w-full text-left">
-                <thead className="border-b border-white/10 bg-white/[0.035]">
-                  <tr className="text-sm font-black uppercase tracking-[0.12em] text-slate-400">
-                    <th className="px-6 py-5">Applicant</th>
-                    <th className="px-6 py-5">Contact</th>
-                    <th className="px-6 py-5">ZIP</th>
-                    <th className="px-6 py-5">Parking</th>
-                    <th className="px-6 py-5">Charger</th>
-                    <th className="px-6 py-5">Applied</th>
-                    <th className="px-6 py-5">Status</th>
-                    <th className="px-6 py-5 text-right">Action</th>
-                  </tr>
-                </thead>
 
-                <tbody className="divide-y divide-white/[0.07]">
-                  {leads.map((lead) => {
-                    const isActiveHost =
-                      activeHostEmails.has(
-                        lead.email
-                          .trim()
-                          .toLowerCase()
-                      );
+          <div className="rounded-2xl border border-amber-300/20 bg-amber-300/[0.05] p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-300">
+              Needs Attention
+            </p>
 
-                    const displayStatus =
-                      isActiveHost
-                        ? "active"
-                        : lead.status;
+            <p className="mt-3 text-4xl font-black">
+              {loading ? "—" : hostsNeedingAttention.length}
+            </p>
 
-                    const isNew =
-                      displayStatus === "new";
+            <p className="mt-1 text-sm text-slate-500">
+              Exceptions requiring KIVO review
+            </p>
+          </div>
 
-                    const isQualified =
-                      displayStatus ===
-                      "qualified";
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+              Activation In Progress
+            </p>
 
-                    const isUpdating =
-                      updatingId === lead.id;
+            <p className="mt-3 text-4xl font-black">
+              {loading ? "—" : hostsInProgress.length}
+            </p>
 
-                    return (
-                      <tr
-                        key={lead.id}
-                        className="align-top transition hover:bg-white/[0.025]"
-                      >
-                        <td className="px-6 py-6">
-                          <p className="text-lg font-extrabold text-white">
-                            {lead.name || "Unnamed applicant"}
-                          </p>
-                          <p className="mt-2 font-mono text-xs text-slate-500">
-                            {lead.id}
-                          </p>
+            <p className="mt-1 text-sm text-slate-500">
+              Monitoring only unless an exception occurs
+            </p>
+          </div>
+        </section>
+
+        <section className="mt-10">
+          <div className="mb-5">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-emerald-400">
+              LIVE MARKETPLACE
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black">
+              Active Hosts
+            </h2>
+          </div>
+
+          {loading ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-7 text-slate-400">
+              Loading active Hosts...
+            </div>
+          ) : activeHosts.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-7">
+              <p className="font-bold text-white">
+                No active Hosts yet.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[800px] text-left">
+                  <thead className="border-b border-white/10 bg-white/[0.035]">
+                    <tr className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      <th className="px-6 py-4">Host</th>
+                      <th className="px-6 py-4">Email</th>
+                      <th className="px-6 py-4">ZIP</th>
+                      <th className="px-6 py-4">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-white/[0.07]">
+                    {activeHosts.map((host) => (
+                      <tr key={host.uid}>
+                        <td className="px-6 py-5 font-bold text-white">
+                          {host.name || "Unnamed Host"}
                         </td>
 
-                        <td className="px-6 py-6">
-                          <p className="text-base font-semibold text-slate-200">
-                            {lead.email || "—"}
-                          </p>
-                          <p className="mt-2 text-base text-slate-500">
-                            {lead.phone || "—"}
-                          </p>
+                        <td className="px-6 py-5 text-slate-300">
+                          {host.email || "—"}
                         </td>
 
-                        <td className="px-6 py-6 text-base font-bold text-slate-300">
-                          {lead.postalCode || "—"}
+                        <td className="px-6 py-5 text-slate-400">
+                          {host.postalCode || "—"}
                         </td>
 
-                        <td className="px-6 py-6 text-base text-slate-300">
-                          {lead.parkingSetup || "—"}
-                        </td>
-
-                        <td className="px-6 py-6 text-base text-slate-300">
-                          {lead.chargerStatus || "—"}
-                        </td>
-
-                        <td className="px-6 py-6 text-base text-slate-400">
-                          {formatDate(lead.createdAt)}
-                        </td>
-
-                        <td className="px-6 py-6">
-                          <span
-                            className={`inline-flex rounded-full px-4 py-2 text-sm font-black uppercase tracking-[0.08em] ${
-                              isNew
-                                ? "border border-cyan-300/20 bg-cyan-300/10 text-cyan-200"
-                                : "border border-emerald-300/20 bg-emerald-300/10 text-emerald-200"
-                            }`}
-                          >
-                            {displayStatus.replaceAll("_", " ")}
+                        <td className="px-6 py-5">
+                          <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.08em] text-emerald-200">
+                            Active
                           </span>
                         </td>
-
-                        <td className="px-5 py-5 text-right">
-                          {isNew ? (
-                            <button
-                              type="button"
-                              disabled={isUpdating}
-                              onClick={() => qualifyLead(lead.id)}
-                              className="rounded-full bg-emerald-400 px-5 py-2.5 text-base font-black text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                              {isUpdating ? "Updating..." : "Qualify"}
-                            </button>
-                          ) : (
-                            <span className="text-base font-semibold text-slate-600">
-                              —
-                            </span>
-                          )}
-                        </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
+          )}
+        </section>
+
+        <section className="mt-10">
+          <div className="mb-5">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-amber-300">
+              ADMIN ACTION
+            </p>
+
+            <h2 className="mt-2 text-3xl font-black">
+              Needs Your Attention
+            </h2>
+
+            <p className="mt-2 text-slate-400">
+              Only genuine exceptions or Hosts ready for final marketplace
+              activation appear here.
+            </p>
           </div>
-        )}
+
+          {loading ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-7 text-slate-400">
+              Checking Host exceptions...
+            </div>
+          ) : hostsNeedingAttention.length === 0 ? (
+            <div className="rounded-3xl border border-emerald-300/15 bg-emerald-300/[0.035] p-7">
+              <p className="font-bold text-emerald-200">
+                Nothing requires your attention.
+              </p>
+
+              <p className="mt-2 text-sm text-slate-400">
+                Routine Host onboarding is continuing without Admin work.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {hostsNeedingAttention.map((host) => {
+                const activation = activationByUid[host.uid];
+
+                const problemGates = Object.entries(
+                  activation?.gates ?? {}
+                )
+                  .filter(([, gate]) =>
+                    statusNeedsAttention(gate?.status)
+                  )
+                  .map(([name]) => prettyStatus(name));
+
+                const readyForFinalActivation =
+                  allRequiredGatesComplete(activation);
+
+                return (
+                  <div
+                    key={host.uid}
+                    className="flex flex-col gap-4 rounded-2xl border border-amber-300/20 bg-amber-300/[0.04] p-5 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="text-lg font-black">
+                        {host.name || "Unnamed Host"}
+                      </p>
+
+                      <p className="mt-1 text-sm text-slate-400">
+                        {host.email}
+                      </p>
+
+                      <p className="mt-3 text-sm font-bold text-amber-200">
+                        {readyForFinalActivation
+                          ? "Ready for final activation"
+                          : `Exception: ${problemGates.join(", ")}`}
+                      </p>
+                    </div>
+
+                    <Link
+                      href="/admin/hosts/activation"
+                      className="rounded-full border border-amber-300/30 px-5 py-2.5 text-sm font-black text-amber-200 hover:bg-amber-300/10"
+                    >
+                      {readyForFinalActivation
+                        ? "Review & activate"
+                        : "Review exception"}
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-10">
+          <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                MONITORING
+              </p>
+
+              <h2 className="mt-2 text-3xl font-black">
+                Activation In Progress
+              </h2>
+
+              <p className="mt-2 text-slate-400">
+                These Hosts are moving through setup. No action is required
+                unless they appear above.
+              </p>
+            </div>
+
+            <Link
+              href="/admin/hosts/activation"
+              className="text-sm font-black text-emerald-300 hover:text-emerald-200"
+            >
+              Open activation tools →
+            </Link>
+          </div>
+
+          {loading ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-7 text-slate-400">
+              Loading activation progress...
+            </div>
+          ) : hostsInProgress.length === 0 ? (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-7 text-slate-400">
+              No Hosts are currently in activation.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[850px] text-left">
+                  <thead className="border-b border-white/10 bg-white/[0.035]">
+                    <tr className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+                      <th className="px-6 py-4">Host</th>
+                      <th className="px-6 py-4">ZIP</th>
+                      <th className="px-6 py-4">Onboarding</th>
+                      <th className="px-6 py-4">Activation</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-white/[0.07]">
+                    {hostsInProgress.map((host) => {
+                      const activation = activationByUid[host.uid];
+
+                      return (
+                        <tr key={host.uid}>
+                          <td className="px-6 py-5">
+                            <p className="font-bold text-white">
+                              {host.name || "Unnamed Host"}
+                            </p>
+
+                            <p className="mt-1 text-sm text-slate-500">
+                              {host.email}
+                            </p>
+                          </td>
+
+                          <td className="px-6 py-5 text-slate-400">
+                            {host.postalCode || "—"}
+                          </td>
+
+                          <td className="px-6 py-5 text-slate-300">
+                            {prettyStatus(host.status)}
+                          </td>
+
+                          <td className="px-6 py-5 text-slate-300">
+                            {prettyStatus(
+                              activation?.status ||
+                                host.activationStatus
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+
+        <section className="mt-10 grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/admin/hosts/applications"
+            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-emerald-300/30"
+          >
+            <p className="font-black text-white">
+              Applications & Review
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Secondary onboarding review and development workspace.
+            </p>
+
+            <p className="mt-4 text-sm font-bold text-emerald-300">
+              Open applications →
+            </p>
+          </Link>
+
+          <Link
+            href="/admin/hosts/activation"
+            className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 transition hover:border-emerald-300/30"
+          >
+            <p className="font-black text-white">
+              Activation Tools
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Inspect activation gates and perform exceptional Admin actions.
+            </p>
+
+            <p className="mt-4 text-sm font-bold text-emerald-300">
+              Open activation tools →
+            </p>
+          </Link>
+        </section>
       </div>
     </main>
   );

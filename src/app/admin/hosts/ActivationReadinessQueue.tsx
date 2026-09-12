@@ -22,6 +22,7 @@ type ActivationRecord = {
     charger?: GateStatus;
     legal?: GateStatus;
     listing?: GateStatus;
+    payouts?: GateStatus;
   };
 };
 
@@ -439,6 +440,7 @@ export default function ActivationReadinessQueue() {
               ["Charger", activation?.gates.charger?.status],
               ["Legal", activation?.gates.legal?.status],
               ["Listing", activation?.gates.listing?.status],
+              ["Payouts", activation?.gates.payouts?.status],
             ] as const;
 
             const allGatesComplete =
