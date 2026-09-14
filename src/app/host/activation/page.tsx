@@ -427,6 +427,15 @@ export default function HostActivationPage() {
         const result =
           await validateActivationAccess();
 
+        if (
+          result.activation.status ===
+          "active"
+        ) {
+          window.location.href =
+            "/host/home";
+          return;
+        }
+
         setData(result);
 
         setStatus(
@@ -434,6 +443,14 @@ export default function HostActivationPage() {
             ? "ready"
             : "password"
         );
+
+        if (
+          result.activation.account.passwordConfigured &&
+          result.activation.gates.payouts.status !==
+            "complete"
+        ) {
+          void refreshPayoutStatus();
+        }
 
         const params =
           new URLSearchParams(
@@ -1741,6 +1758,22 @@ export default function HostActivationPage() {
             {error && (
               <ErrorBox message={error} />
             )}
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+              <a
+                href="/login"
+                className="inline-flex justify-center rounded-full bg-emerald-400 px-7 py-4 font-black text-slate-950 transition hover:bg-emerald-300"
+              >
+                Sign in to KIVO
+              </a>
+
+              <a
+                href="/account"
+                className="inline-flex justify-center rounded-full border border-white/15 px-7 py-4 font-black text-white transition hover:bg-white/5"
+              >
+                Check my account
+              </a>
+            </div>
 
             <button
               type="submit"
