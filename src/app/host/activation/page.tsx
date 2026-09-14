@@ -249,6 +249,11 @@ export default function HostActivationPage() {
   ] = useState("");
 
   const [
+    returnedFromStripe,
+    setReturnedFromStripe,
+  ] = useState(false);
+
+  const [
     autoActivating,
     setAutoActivating,
   ] = useState(false);
@@ -444,29 +449,29 @@ export default function HostActivationPage() {
             : "password"
         );
 
-        if (
-          result.activation.account.passwordConfigured &&
-          result.activation.gates.payouts.status !==
-            "complete"
-        ) {
-          void refreshPayoutStatus();
-        }
-
         const params =
           new URLSearchParams(
             window.location.search
           );
 
-        if (
-          params.get("stripe") ===
-          "return"
-        ) {
+        const isStripeReturn =
+          params.get("stripe") === "return";
+
+        if (isStripeReturn) {
+          setReturnedFromStripe(true);
+
           window.history.replaceState(
             {},
             "",
             "/host/activation"
           );
 
+          void refreshPayoutStatus();
+        } else if (
+          result.activation.account.passwordConfigured &&
+          result.activation.gates.payouts.status !==
+            "complete"
+        ) {
           void refreshPayoutStatus();
         }
 
@@ -636,6 +641,8 @@ export default function HostActivationPage() {
 
         setData(refreshed);
       } else {
+        setReturnedFromStripe(false);
+
         setPayoutMessage(
           "Stripe payout setup still needs to be completed."
         );
@@ -1935,12 +1942,17 @@ export default function HostActivationPage() {
 
             <ActivationCard
               title="Payout setup"
-              description="Set up Stripe when you're ready. Payout setup is required before your Host listing can go live and receive paid charging requests."
+              description={
+                returnedFromStripe
+                  ? "You've returned from Stripe. KIVO is verifying your payout status before activating your Host account."
+                  : "Set up Stripe when you're ready. Payout setup is required before your Host listing can go live and receive paid charging requests."
+              }
               status={data.activation.gates.payouts.status}
               onClick={() => {
                 if (
+                  returnedFromStripe ||
                   data.activation.gates.payouts.status ===
-                  "complete"
+                    "complete"
                 ) {
                   void refreshPayoutStatus();
                 } else {
@@ -1949,11 +1961,13 @@ export default function HostActivationPage() {
               }}
               actionLabel={
                 payoutLoading
-                  ? "Checking..."
-                  : data.activation.gates.payouts.status ===
-                    "complete"
-                    ? "Verify status"
-                    : "Set up payouts"
+                  ? "Verifying payout status..."
+                  : returnedFromStripe
+                    ? "Verify payout status"
+                    : data.activation.gates.payouts.status ===
+                        "complete"
+                      ? "Verify status"
+                      : "Set up payouts"
               }
             />
           </div>
