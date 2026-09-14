@@ -2,6 +2,7 @@
 
 import {
   isSignInWithEmailLink,
+  onAuthStateChanged,
   signInWithEmailLink,
   signOut,
   updatePassword,
@@ -253,7 +254,63 @@ export default function HostActivationPage() {
   ] = useState(false);
 
   useEffect(() => {
-    void initializeActivation();
+    if (!auth) {
+      setError(
+        "KIVO authentication is unavailable."
+      );
+      setStatus("error");
+      return;
+    }
+
+    const firebaseAuth = auth;
+
+    let initialized = false;
+
+    const unsubscribe =
+      onAuthStateChanged(
+        firebaseAuth,
+        (user) => {
+          if (
+            user &&
+            !initialized
+          ) {
+            initialized = true;
+            void initializeActivation();
+            return;
+          }
+
+          if (!user) {
+            const timer =
+              window.setTimeout(
+                () => {
+                  if (
+                    !firebaseAuth.currentUser &&
+                    !isSignInWithEmailLink(
+                      firebaseAuth,
+                      window.location.href
+                    )
+                  ) {
+                    setError(
+                      "Your KIVO session has expired. Please sign in again."
+                    );
+
+                    setStatus(
+                      "error"
+                    );
+                  }
+                },
+                800
+              );
+
+            return () =>
+              window.clearTimeout(
+                timer
+              );
+          }
+        }
+      );
+
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
