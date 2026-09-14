@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Private KIVO reset/recovery exports
+kivo-pre-reset-*.csv
