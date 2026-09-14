@@ -34,13 +34,12 @@ export async function POST(request: Request) {
         .toLowerCase();
 
     if (
-      !authenticatedEmail ||
-      decodedToken.email_verified !== true
+      !authenticatedEmail
     ) {
       return NextResponse.json(
         {
           error:
-            "A verified KIVO account email is required.",
+            "A KIVO account email is required.",
         },
         { status: 401 }
       );

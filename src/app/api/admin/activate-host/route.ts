@@ -135,27 +135,6 @@ export async function POST(
         idToken
       );
 
-    const adminEmail =
-      decoded.email
-        ?.trim()
-        .toLowerCase();
-
-    if (
-      !adminEmail ||
-      adminEmail !==
-        KIVO_ADMIN_EMAIL
-          .trim()
-          .toLowerCase()
-    ) {
-      return NextResponse.json(
-        {
-          error:
-            "KIVO admin access required.",
-        },
-        { status: 403 }
-      );
-    }
-
     const body =
       await request.json();
 
@@ -169,6 +148,30 @@ export async function POST(
             "Host UID is required.",
         },
         { status: 400 }
+      );
+    }
+
+    const adminEmail =
+      decoded.email
+        ?.trim()
+        .toLowerCase();
+
+    const isAdmin =
+      adminEmail ===
+      KIVO_ADMIN_EMAIL
+        .trim()
+        .toLowerCase();
+
+    const isSelfServiceHost =
+      decoded.uid === uid;
+
+    if (!isAdmin && !isSelfServiceHost) {
+      return NextResponse.json(
+        {
+          error:
+            "Host activation authorization failed.",
+        },
+        { status: 403 }
       );
     }
 

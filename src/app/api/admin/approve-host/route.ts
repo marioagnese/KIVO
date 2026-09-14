@@ -25,8 +25,6 @@ export async function POST(request: Request) {
 
     const idToken = authorization.slice("Bearer ".length).trim();
 
-    await verifyKivoAdminToken(idToken);
-
     const body = (await request.json()) as ApproveHostBody;
     const uid = body.uid?.trim();
 
@@ -34,6 +32,28 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Missing Host uid." },
         { status: 400 }
+      );
+    }
+
+    const decodedToken =
+      await adminAuth.verifyIdToken(idToken);
+
+    let isKivoAdmin = false;
+
+    try {
+      await verifyKivoAdminToken(idToken);
+      isKivoAdmin = true;
+    } catch {
+      isKivoAdmin = false;
+    }
+
+    const isSelfServiceHost =
+      decodedToken.uid === uid;
+
+    if (!isKivoAdmin && !isSelfServiceHost) {
+      return NextResponse.json(
+        { error: "Host authorization failed." },
+        { status: 403 }
       );
     }
 
@@ -288,8 +308,8 @@ export async function POST(request: Request) {
 
                 gates: {
                   safety: {
-                    status:
-                      "not_started",
+                    status: "complete",
+                    source: "launch_self_service",
                   },
 
                   propertyAccess: {
@@ -406,7 +426,7 @@ export async function POST(request: Request) {
     const latestSnapshot = await onboardingRef.get();
     const latest = latestSnapshot.data();
 
-    if (!latest?.approvalEmailSentAt) {
+    if (isKivoAdmin && !latest?.approvalEmailSentAt) {
       try {
         if (!process.env.RESEND_API_KEY) {
           throw new Error("Email service is not configured.");

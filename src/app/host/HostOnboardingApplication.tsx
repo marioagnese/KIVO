@@ -421,6 +421,33 @@ export default function HostOnboardingApplication({
       try {
         const idToken = await auth.currentUser.getIdToken(true);
 
+        const approvalResponse = await fetch(
+          "/api/admin/approve-host",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              uid: auth.currentUser.uid,
+            }),
+          }
+        );
+
+        const approvalResult =
+          await approvalResponse.json().catch(() => null);
+
+        if (!approvalResponse.ok) {
+          throw new Error(
+            approvalResult?.error ||
+              "KIVO could not complete your Host setup."
+          );
+        }
+
+        window.location.href = "/host/activation";
+        return;
+
         const response = await fetch(
           "/api/host/onboarding-complete-email",
           {

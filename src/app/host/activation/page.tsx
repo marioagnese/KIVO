@@ -247,9 +247,93 @@ export default function HostActivationPage() {
     setPayoutMessage,
   ] = useState("");
 
+  const [
+    autoActivating,
+    setAutoActivating,
+  ] = useState(false);
+
   useEffect(() => {
     void initializeActivation();
   }, []);
+
+  useEffect(() => {
+    if (
+      status !== "ready" ||
+      !data ||
+      autoActivating ||
+      data.activation.status === "active"
+    ) {
+      return;
+    }
+
+    const gates = data.activation.gates;
+
+    const allComplete =
+      gates.safety.status === "complete" &&
+      gates.propertyAccess.status === "complete" &&
+      gates.charger.status === "complete" &&
+      gates.legal.status === "complete" &&
+      gates.listing.status === "complete" &&
+      gates.payouts.status === "complete";
+
+    if (allComplete) {
+      void activateHostAutomatically();
+    }
+  }, [data, status, autoActivating]);
+
+  async function activateHostAutomatically() {
+    if (!auth?.currentUser || autoActivating) {
+      return;
+    }
+
+    setAutoActivating(true);
+    setError("");
+
+    try {
+      const idToken =
+        await auth.currentUser.getIdToken(true);
+
+      const response =
+        await fetch(
+          "/api/admin/activate-host",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${idToken}`,
+            },
+            body: JSON.stringify({
+              uid: auth.currentUser.uid,
+            }),
+          }
+        );
+
+      const result =
+        await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          result?.error ||
+            "KIVO could not activate your Host account."
+        );
+      }
+
+      window.location.href = "/host/home";
+    } catch (err) {
+      console.error(
+        "Automatic Host activation failed:",
+        err
+      );
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : "KIVO could not activate your Host account."
+      );
+
+      setAutoActivating(false);
+    }
+  }
 
   async function initializeActivation() {
     if (!auth) {
