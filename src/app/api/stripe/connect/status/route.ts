@@ -172,7 +172,6 @@ export async function GET(request: Request) {
       0;
 
     const payoutsReady =
-      recipient?.applied === true &&
       transfersStatus === "active" &&
       requirementsDue === 0;
 
