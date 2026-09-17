@@ -255,6 +255,19 @@ export async function POST(
       listing:
         activation.gates?.listing?.status,
 
+      photos:
+        activation.gates?.photos?.status === "complete" ||
+        (
+          typeof onboarding.photos?.charger === "string" &&
+          onboarding.photos.charger &&
+          typeof onboarding.photos?.parking === "string" &&
+          onboarding.photos.parking &&
+          typeof onboarding.photos?.arrival === "string" &&
+          onboarding.photos.arrival
+        )
+          ? "complete"
+          : activation.gates?.photos?.status,
+
       payouts:
         activation.gates?.payouts?.status,
     };

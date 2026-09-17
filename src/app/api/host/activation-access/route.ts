@@ -308,6 +308,23 @@ export async function POST(request: Request) {
               ),
           },
 
+          photos: {
+            status:
+              String(
+                activation.gates?.photos?.status ??
+                  (
+                    typeof onboarding.photos?.charger === "string" &&
+                    onboarding.photos.charger &&
+                    typeof onboarding.photos?.parking === "string" &&
+                    onboarding.photos.parking &&
+                    typeof onboarding.photos?.arrival === "string" &&
+                    onboarding.photos.arrival
+                      ? "complete"
+                      : "not_started"
+                  )
+              ),
+          },
+
           payouts: {
             status:
               String(

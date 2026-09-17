@@ -64,7 +64,7 @@ const initialSetup: SetupState = {
 const steps = [
   { number: 1, title: "Your charger" },
   { number: 2, title: "Parking & access" },
-  { number: 3, title: "Photos" },
+  { number: 3, title: "Photos — optional now" },
   { number: 4, title: "Hosting preferences" },
 ];
 
@@ -322,14 +322,8 @@ export default function HostOnboardingApplication({
       }
     }
 
-    if (step === 3) {
-      if (!photos.charger || !photos.parking || !photos.arrival) {
-        setError(
-          "Please add the charger, parking-space, and arrival-view photos."
-        );
-        return false;
-      }
-    }
+    // Photos are optional during early onboarding.
+    // They become a hard activation requirement before payouts.
 
     if (step === 4) {
       if (setup.availability.length === 0) {
@@ -351,7 +345,10 @@ export default function HostOnboardingApplication({
 
     const next = Math.min(step + 1, 5);
 
-    if (step === 3) {
+    if (
+      step === 3 &&
+      Object.values(photos).some((file) => file !== null)
+    ) {
       const uploaded = await uploadPhotos();
 
       if (!uploaded) return;

@@ -165,6 +165,45 @@ export async function POST(request: Request) {
     const activationData =
       activationSnapshot.data() ?? {};
 
+    /*
+     * New Hosts must complete required charging-location photos
+     * before entering Stripe Connect.
+     *
+     * Existing operational Hosts remain unaffected.
+     */
+    if (!hasHostRole) {
+      const onboardingSnapshot =
+        await adminDb
+          .collection("hostOnboarding")
+          .doc(decoded.uid)
+          .get();
+
+      const onboardingData =
+        onboardingSnapshot.data() ?? {};
+
+      const legacyPhotosComplete =
+        typeof onboardingData.photos?.charger === "string" &&
+        Boolean(onboardingData.photos.charger) &&
+        typeof onboardingData.photos?.parking === "string" &&
+        Boolean(onboardingData.photos.parking) &&
+        typeof onboardingData.photos?.arrival === "string" &&
+        Boolean(onboardingData.photos.arrival);
+
+      const photosReady =
+        activationData.gates?.photos?.status === "complete" ||
+        legacyPhotosComplete;
+
+      if (!photosReady) {
+        return NextResponse.json(
+          {
+            error:
+              "Add your required charger, parking and arrival photos before setting up payouts.",
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const hostCountry =
       String(
         activationData.privateProperty?.country ??

@@ -85,6 +85,7 @@ type ActivationData = {
       charger: { status: string };
       legal: { status: string };
       listing: { status: string };
+      photos: { status: string };
       payouts: { status: string };
     };
 
@@ -336,6 +337,7 @@ export default function HostActivationPage() {
       gates.charger.status === "complete" &&
       gates.legal.status === "complete" &&
       gates.listing.status === "complete" &&
+      gates.photos.status === "complete" &&
       gates.payouts.status === "complete";
 
     if (allComplete) {
@@ -662,6 +664,16 @@ export default function HostActivationPage() {
     if (!auth?.currentUser) {
       setPayoutMessage(
         "KIVO sign-in is required."
+      );
+      return;
+    }
+
+    if (
+      data?.activation.gates.photos.status !==
+      "complete"
+    ) {
+      setPayoutMessage(
+        "Add your required charger, parking and arrival photos before setting up payouts."
       );
       return;
     }
@@ -1819,7 +1831,7 @@ export default function HostActivationPage() {
         </h1>
 
         <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-300">
-          Your Founding Host setup is approved. We already have your charger, parking, photos and hosting preferences, so you won't need to enter them again.
+          Your Founding Host setup is approved. We already have your charger, parking and hosting preferences. Complete the remaining activation items below; if you already uploaded your photos, KIVO will recognize them automatically.
         </p>
 
         <div className="mt-8 rounded-[28px] border border-emerald-300/20 bg-emerald-300/[0.06] p-6 sm:p-8">
@@ -1937,6 +1949,22 @@ export default function HostActivationPage() {
                 "complete"
                   ? "Review"
                   : "Complete"
+              }
+            />
+
+            <ActivationCard
+              title="Required photos"
+              description="Add a charger photo, parking-space photo and arrival-view photo before payout setup."
+              status={data.activation.gates.photos.status}
+              onClick={() => {
+                window.location.href =
+                  "/host/activation/photos";
+              }}
+              actionLabel={
+                data.activation.gates.photos.status ===
+                "complete"
+                  ? "Review"
+                  : "Add photos"
               }
             />
 

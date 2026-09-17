@@ -332,6 +332,28 @@ export async function POST(request: Request) {
                       "not_started",
                   },
 
+                  photos: {
+                    status:
+                      typeof currentOnboarding.photos?.charger === "string" &&
+                      currentOnboarding.photos.charger &&
+                      typeof currentOnboarding.photos?.parking === "string" &&
+                      currentOnboarding.photos.parking &&
+                      typeof currentOnboarding.photos?.arrival === "string" &&
+                      currentOnboarding.photos.arrival
+                        ? "complete"
+                        : "not_started",
+
+                    source:
+                      typeof currentOnboarding.photos?.charger === "string" &&
+                      currentOnboarding.photos.charger &&
+                      typeof currentOnboarding.photos?.parking === "string" &&
+                      currentOnboarding.photos.parking &&
+                      typeof currentOnboarding.photos?.arrival === "string" &&
+                      currentOnboarding.photos.arrival
+                        ? "founding_onboarding"
+                        : "host_activation",
+                  },
+
                   payouts: {
                     status:
                       "not_started",
@@ -489,7 +511,7 @@ export async function POST(request: Request) {
                 </div>
 
                 <p style="font-size:16px;line-height:1.7;color:#475569;margin:0 0 20px;">
-                  We already have your charger, parking, photos and hosting preferences, so you won’t need to enter them again. Next, we’ll guide you through the remaining account, identity, safety, agreement, property and listing steps.
+                  We already have your charger, parking and hosting preferences. Next, we’ll guide you through the remaining identity, safety, agreement, property, listing, photo and payout steps. If you already uploaded your photos, KIVO will recognize them automatically.
                 </p>
 
                 <div style="margin:30px 0;">
