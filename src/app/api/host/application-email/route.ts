@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
 type ApplicationEmailBody = {
+  leadId: string;
   name: string;
   phone: string;
   email: string;
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { error: "Email service is not configured." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -24,6 +25,7 @@ export async function POST(request: Request) {
     const body = (await request.json()) as ApplicationEmailBody;
 
     const {
+      leadId,
       name,
       phone,
       email,
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
     } = body;
 
     if (
+      !leadId?.trim() ||
       !name?.trim() ||
       !phone?.trim() ||
       !email?.trim() ||
@@ -42,16 +45,22 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         { error: "Missing required application information." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const applicantEmail = email.trim().toLowerCase();
 
+    const baseUrl =
+      process.env.NEXT_PUBLIC_APP_URL || "https://www.kivocharge.com";
+
+    const continueUrl =
+      `${baseUrl}/host/onboarding/start` +
+      `?lead=${encodeURIComponent(leadId.trim())}` +
+      `&email=${encodeURIComponent(applicantEmail)}`;
+
     const applicantResult = await resend.emails.send({
-      from:
-        process.env.KIVO_EMAIL_FROM ||
-        "KIVO Hosts <onboarding@resend.dev>",
+      from: process.env.KIVO_EMAIL_FROM || "KIVO Hosts <onboarding@resend.dev>",
       to: applicantEmail,
       replyTo:
         process.env.KIVO_EMAIL_REPLY_TO ||
@@ -75,8 +84,15 @@ export async function POST(request: Request) {
             </p>
 
             <p style="font-size:18px;line-height:1.7;color:#475569;margin:0 0 20px;">
-              We’ll review your location and charger status. If your area is a good fit for the early KIVO network, we’ll contact you with the next step.
+              Your Founding Host application has been received. Continue your Host setup now to complete your charger, property and hosting information.
             </p>
+
+            <a
+              href="${continueUrl}"
+              style="display:inline-block;background:#34d399;color:#020817;text-decoration:none;font-size:17px;font-weight:800;padding:15px 24px;border-radius:999px;margin:8px 0 24px;"
+            >
+              Continue my Host setup →
+            </a>
 
             <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin:26px 0;">
               <strong style="display:block;font-size:17px;color:#020817;margin-bottom:8px;">
@@ -104,15 +120,14 @@ export async function POST(request: Request) {
 
     if (applicantResult.error) {
       throw new Error(
-        `Applicant email failed: ${applicantResult.error.message}`
+        `Applicant email failed: ${applicantResult.error.message}`,
       );
     }
 
     if (process.env.KIVO_INTERNAL_EMAIL) {
       const internalResult = await resend.emails.send({
         from:
-          process.env.KIVO_EMAIL_FROM ||
-          "KIVO Hosts <onboarding@resend.dev>",
+          process.env.KIVO_EMAIL_FROM || "KIVO Hosts <onboarding@resend.dev>",
         to: process.env.KIVO_INTERNAL_EMAIL,
         replyTo: applicantEmail,
         subject: `New Founding Host — ${postalCode.trim().toUpperCase()}`,
@@ -145,7 +160,7 @@ export async function POST(request: Request) {
 
       if (internalResult.error) {
         throw new Error(
-          `Internal email failed: ${internalResult.error.message}`
+          `Internal email failed: ${internalResult.error.message}`,
         );
       }
     }
@@ -156,7 +171,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(
       { error: "Unable to send application email." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
