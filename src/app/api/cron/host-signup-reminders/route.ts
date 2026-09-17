@@ -84,8 +84,7 @@ function reminderHtml({
         </a>
 
         <p style="font-size:15px;line-height:1.6;color:#64748b;margin:26px 0 0;">
-          Nothing is public or bookable until KIVO review and
-          activation are complete.
+          Nothing is public or bookable until KIVO review and activation are complete.
         </p>
 
         <p style="font-size:16px;line-height:1.7;color:#020817;margin:26px 0 0;font-weight:700;">
@@ -113,12 +112,12 @@ export async function GET(request: Request) {
 
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
-        {
-          error: "Email service is not configured.",
-        },
+        { error: "Email service is not configured." },
         { status: 500 },
       );
     }
+
+    const dryRun = new URL(request.url).searchParams.get("dryRun") === "1";
 
     const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -130,6 +129,8 @@ export async function GET(request: Request) {
 
     const snapshot = await adminDb.collection("foundingHostLeads").get();
 
+    let reminder48hDue = 0;
+    let reminder10dDue = 0;
     let reminder48hSent = 0;
     let reminder10dSent = 0;
     let skippedStarted = 0;
@@ -153,6 +154,19 @@ export async function GET(request: Request) {
         continue;
       }
 
+      // Protect older leads that started onboarding
+      // before onboardingStartedAt existed.
+      const existingOnboarding = await adminDb
+        .collection("hostOnboarding")
+        .where("leadId", "==", document.id)
+        .limit(1)
+        .get();
+
+      if (!existingOnboarding.empty) {
+        skippedStarted++;
+        continue;
+      }
+
       const createdAt = lead.createdAt?.toDate?.();
 
       if (!createdAt) {
@@ -163,9 +177,15 @@ export async function GET(request: Request) {
 
       const url = onboardingUrl(document.id, email);
 
-      // Check Day 10 first so an old lead
-      // never receives both reminders at once.
+      // Day 10 first so an older lead never gets
+      // both messages in the same run.
       if (age >= tenDays && !lead.signupReminder10dSentAt) {
+        reminder10dDue++;
+
+        if (dryRun) {
+          continue;
+        }
+
         const result = await resend.emails.send({
           from:
             process.env.KIVO_EMAIL_FROM || "KIVO Hosts <onboarding@resend.dev>",
@@ -210,6 +230,12 @@ export async function GET(request: Request) {
         age < tenDays &&
         !lead.signupReminder48hSentAt
       ) {
+        reminder48hDue++;
+
+        if (dryRun) {
+          continue;
+        }
+
         const result = await resend.emails.send({
           from:
             process.env.KIVO_EMAIL_FROM || "KIVO Hosts <onboarding@resend.dev>",
@@ -254,6 +280,9 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       ok: true,
+      dryRun,
+      reminder48hDue,
+      reminder10dDue,
       reminder48hSent,
       reminder10dSent,
       skippedStarted,
