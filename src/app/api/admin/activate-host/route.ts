@@ -162,14 +162,11 @@ export async function POST(
         .trim()
         .toLowerCase();
 
-    const isSelfServiceHost =
-      decoded.uid === uid;
-
-    if (!isAdmin && !isSelfServiceHost) {
+    if (!isAdmin) {
       return NextResponse.json(
         {
           error:
-            "Host activation authorization failed.",
+            "Final Host activation requires KIVO Admin authorization.",
         },
         { status: 403 }
       );
@@ -231,6 +228,20 @@ export async function POST(
         {
           error:
             "Only an approved Host can be activated.",
+        },
+        { status: 409 }
+      );
+    }
+
+    if (
+      activation.status !==
+        "ready_for_final_approval" &&
+      activation.status !== "active"
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "This Host has not completed self-service activation and is not ready for final KIVO approval.",
         },
         { status: 409 }
       );

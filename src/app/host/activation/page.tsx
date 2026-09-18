@@ -324,7 +324,9 @@ export default function HostActivationPage() {
       status !== "ready" ||
       !data ||
       autoActivating ||
-      data.activation.status === "active"
+      data.activation.status === "active" ||
+      data.activation.status ===
+        "ready_for_final_approval"
     ) {
       return;
     }
@@ -341,11 +343,11 @@ export default function HostActivationPage() {
       gates.payouts.status === "complete";
 
     if (allComplete) {
-      void activateHostAutomatically();
+      void markReadyForFinalApproval();
     }
   }, [data, status, autoActivating]);
 
-  async function activateHostAutomatically() {
+  async function markReadyForFinalApproval() {
     if (!auth?.currentUser || autoActivating) {
       return;
     }
@@ -359,42 +361,52 @@ export default function HostActivationPage() {
 
       const response =
         await fetch(
-          "/api/admin/activate-host",
+          "/api/host/activation-ready",
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${idToken}`,
+              Authorization:
+                `Bearer ${idToken}`,
             },
-            body: JSON.stringify({
-              uid: auth.currentUser.uid,
-            }),
           }
         );
 
       const result =
-        await response.json().catch(() => null);
+        await response
+          .json()
+          .catch(() => null);
 
       if (!response.ok) {
         throw new Error(
           result?.error ||
-            "KIVO could not activate your Host account."
+            "KIVO could not complete your Host setup."
         );
       }
 
-      window.location.href = "/host/home";
+      setData((current) => {
+        if (!current) return current;
+
+        return {
+          ...current,
+          activation: {
+            ...current.activation,
+            status:
+              "ready_for_final_approval",
+          },
+        };
+      });
     } catch (err) {
       console.error(
-        "Automatic Host activation failed:",
+        "Host final-approval handoff failed:",
         err
       );
 
       setError(
         err instanceof Error
           ? err.message
-          : "KIVO could not activate your Host account."
+          : "KIVO could not complete your Host setup."
       );
-
+    } finally {
       setAutoActivating(false);
     }
   }
@@ -1877,6 +1889,27 @@ export default function HostActivationPage() {
             />
           </div>
         </div>
+
+        {data.activation.status ===
+          "ready_for_final_approval" && (
+          <div className="mt-8 rounded-[28px] border border-emerald-300/25 bg-emerald-300/[0.08] p-6 sm:p-8">
+            <p className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">
+              SETUP COMPLETE
+            </p>
+
+            <h2 className="mt-3 text-2xl font-black text-white sm:text-3xl">
+              Your Host setup is ready for final KIVO approval.
+            </h2>
+
+            <p className="mt-3 max-w-3xl text-base leading-7 text-slate-300">
+              You’ve completed all required Host setup steps. No additional action is required from you right now. KIVO will perform the final review before your charger becomes active and bookable.
+            </p>
+
+            <p className="mt-4 text-sm font-bold text-emerald-200">
+              Your charger is not public or bookable until final KIVO approval.
+            </p>
+          </div>
+        )}
 
         <div className="mt-8">
           <p className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">
