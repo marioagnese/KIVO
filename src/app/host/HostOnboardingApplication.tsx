@@ -64,8 +64,7 @@ const initialSetup: SetupState = {
 const steps = [
   { number: 1, title: "Your charger" },
   { number: 2, title: "Parking & access" },
-  { number: 3, title: "Photos — optional now" },
-  { number: 4, title: "Hosting preferences" },
+  { number: 3, title: "Hosting preferences" },
 ];
 
 const amenityOptions = [
@@ -322,10 +321,7 @@ export default function HostOnboardingApplication({
       }
     }
 
-    // Photos are optional during early onboarding.
-    // They become a hard activation requirement before payouts.
-
-    if (step === 4) {
+    if (step === 3) {
       if (setup.availability.length === 0) {
         setError("Choose at least one likely availability window.");
         return false;
@@ -343,16 +339,7 @@ export default function HostOnboardingApplication({
   async function nextStep() {
     if (!validateCurrentStep()) return;
 
-    const next = Math.min(step + 1, 5);
-
-    if (
-      step === 3 &&
-      Object.values(photos).some((file) => file !== null)
-    ) {
-      const uploaded = await uploadPhotos();
-
-      if (!uploaded) return;
-    }
+    const next = Math.min(step + 1, 4);
 
     const ok = await saveProgress(next);
 
@@ -383,7 +370,7 @@ export default function HostOnboardingApplication({
           postalCode: lead.postalCode,
 
           status: "review_pending",
-          currentStep: 5,
+          currentStep: 4,
 
           charger: {
             brand: setup.chargerBrand,
@@ -493,7 +480,7 @@ export default function HostOnboardingApplication({
   }
 
   const progress = useMemo(() => {
-    return Math.min(step, 4) * 25;
+    return Math.min(step, 3) * (100 / 3);
   }, [step]);
 
   if (submittedForReview) {
@@ -524,9 +511,9 @@ export default function HostOnboardingApplication({
             </p>
 
             <p className="mt-3 text-base leading-7 text-slate-300">
-              KIVO will review your charger, parking access, photos and hosting
-              preferences before moving you to the remaining approval and
-              safety-screening steps.
+              KIVO will review your charger, parking access and hosting
+              preferences before moving you to the remaining activation
+              steps. Required location photos are completed later before payout setup.
             </p>
           </div>
 
@@ -545,7 +532,7 @@ export default function HostOnboardingApplication({
     );
   }
 
-  if (step === 5) {
+  if (step === 4) {
     return (
       <main className="min-h-screen bg-[#020817] px-5 py-10 text-white sm:px-8 sm:py-14">
         <div className="mx-auto max-w-4xl">
@@ -584,10 +571,8 @@ export default function HostOnboardingApplication({
             <ReviewCard
               title="Photos"
               lines={[
-                photos.charger?.name || "Charger photo",
-                photos.parking?.name || "Parking photo",
-                photos.arrival?.name || "Arrival photo",
-                photos.extra?.name || "No extra photo",
+                "Completed later during final Host activation",
+                "Required before payout setup",
               ]}
             />
 
@@ -622,7 +607,7 @@ export default function HostOnboardingApplication({
           <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
             <button
               type="button"
-              onClick={() => setStep(4)}
+              onClick={() => setStep(3)}
               disabled={saving}
               className="rounded-full border border-white/15 px-6 py-3.5 text-base font-bold text-white transition hover:bg-white/[0.06] disabled:opacity-50"
             >
@@ -668,7 +653,7 @@ export default function HostOnboardingApplication({
             />
           </div>
 
-          <div className="mt-4 grid grid-cols-4 gap-2">
+          <div className="mt-4 grid grid-cols-3 gap-2">
             {steps.map((item) => {
               const active = item.number === step;
               const completed = item.number < step;
@@ -704,7 +689,7 @@ export default function HostOnboardingApplication({
           {step === 1 && (
             <>
               <StepHeading
-                eyebrow="STEP 1 OF 4"
+                eyebrow="STEP 1 OF 3"
                 title="Tell us about your charger."
                 description="Basic charger information helps us match compatible vehicles. If you don’t know every detail, that’s okay."
               />
@@ -759,7 +744,7 @@ export default function HostOnboardingApplication({
           {step === 2 && (
             <>
               <StepHeading
-                eyebrow="STEP 2 OF 4"
+                eyebrow="STEP 2 OF 3"
                 title="Where would the Driver park?"
                 description="We care about the actual charging experience — where the car goes, how the Driver gets there, and anything they need to know."
               />
@@ -812,72 +797,7 @@ export default function HostOnboardingApplication({
           {step === 3 && (
             <>
               <StepHeading
-                eyebrow="STEP 3 OF 4"
-                title="Show us what arrival looks like."
-                description="Three quick photos help prevent confusion before the first Driver ever arrives."
-              />
-
-              <div className="mt-8 grid gap-5 md:grid-cols-3">
-                <PhotoUpload
-                  title="1. Charger"
-                  description="A clear close-up of the actual charger and connector."
-                  required
-                  file={photos.charger}
-                  onChange={(file) =>
-                    setPhotos((current) => ({ ...current, charger: file }))
-                  }
-                />
-
-                <PhotoUpload
-                  title="2. Parking space"
-                  description="Show exactly where the Driver’s vehicle would park."
-                  required
-                  file={photos.parking}
-                  onChange={(file) =>
-                    setPhotos((current) => ({ ...current, parking: file }))
-                  }
-                />
-
-                <PhotoUpload
-                  title="3. Arrival view"
-                  description="A wider view showing what the Driver sees when approaching."
-                  required
-                  file={photos.arrival}
-                  onChange={(file) =>
-                    setPhotos((current) => ({ ...current, arrival: file }))
-                  }
-                />
-              </div>
-
-              <div className="mt-5">
-                <PhotoUpload
-                  title="Optional access detail"
-                  description="Gate, garage entrance, alley, cable path, or anything else that would make arrival easier."
-                  file={photos.extra}
-                  onChange={(file) =>
-                    setPhotos((current) => ({ ...current, extra: file }))
-                  }
-                />
-              </div>
-
-              <div className="mt-6 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.06] p-5">
-                <p className="font-black text-white">
-                  Keep personal details out of the photos.
-                </p>
-
-                <p className="mt-2 text-base leading-7 text-slate-300">
-                  Avoid people, house interiors, license plates, mail, security
-                  screens or anything you would not want an approved Driver to
-                  see.
-                </p>
-              </div>
-            </>
-          )}
-
-          {step === 4 && (
-            <>
-              <StepHeading
-                eyebrow="STEP 4 OF 4"
+                eyebrow="STEP 3 OF 3"
                 title="You stay in control."
                 description="Choose what generally works for you. These preferences can change later."
               />
@@ -984,7 +904,7 @@ export default function HostOnboardingApplication({
                   ? "Uploading photos..."
                   : saving
                     ? "Saving..."
-                    : step === 4
+                    : step === 3
                     ? "Review my setup →"
                     : "Continue →"}
               </button>
