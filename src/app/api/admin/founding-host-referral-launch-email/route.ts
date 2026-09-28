@@ -82,6 +82,62 @@ function activeEmailHtml({
   `;
 }
 
+function readyForApprovalEmailHtml({
+  name,
+  statusUrl,
+}: {
+  name: string;
+  statusUrl: string;
+}) {
+  return `
+    <div style="background:#f6f8fb;padding:32px 16px;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+      <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:24px;padding:36px;">
+
+        <div style="font-size:13px;font-weight:800;letter-spacing:0.18em;color:#047857;">
+          KIVO FOUNDING HOSTS
+        </div>
+
+        <h1 style="font-size:32px;line-height:1.1;margin:14px 0 18px;">
+          You're almost there, ${escapeHtml(name)}.
+        </h1>
+
+        <p style="font-size:18px;line-height:1.7;color:#475569;">
+          You've completed your KIVO Host activation steps. There is nothing else you need to submit right now.
+        </p>
+
+        <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:18px;padding:22px;margin:26px 0;">
+          <strong style="display:block;font-size:19px;color:#065f46;">
+            Your Founding Host Referral Partner benefit is reserved.
+          </strong>
+
+          <p style="font-size:16px;line-height:1.65;color:#475569;margin:12px 0 0;">
+            Once KIVO completes final activation, you'll unlock your personal referral link.
+          </p>
+
+          <p style="font-size:16px;line-height:1.65;color:#475569;margin:12px 0 0;">
+            You'll earn 15% of KIVO's commission for life from Hosts you directly refer. During the Founding Host cohort, a direct Founding Host referral who becomes fully active also earns you a $20 referral credit.
+          </p>
+        </div>
+
+        <p style="font-size:17px;line-height:1.7;color:#475569;">
+          Your original Founding Host benefit also remains unchanged:
+          <strong>The first 200 approved Founding Hosts receive 0% KIVO commission for life.</strong>
+        </p>
+
+        <a href="${statusUrl}"
+           style="display:inline-block;background:#34d399;color:#020817;text-decoration:none;font-size:17px;font-weight:800;padding:15px 24px;border-radius:999px;margin:12px 0 22px;">
+          View my Host status →
+        </a>
+
+        <p style="font-size:16px;line-height:1.7;color:#020817;margin-top:26px;font-weight:700;">
+          KIVO<br />
+          <span style="color:#64748b;font-weight:400;">Your Neighborhood Charger</span>
+        </p>
+      </div>
+    </div>
+  `;
+}
+
 function incompleteEmailHtml({
   name,
   continueUrl,
@@ -324,16 +380,23 @@ export async function GET(request: Request) {
 
       let kind: string;
 
+      const activationStatus = String(
+        activation?.status ??
+          onboarding?.data.status ??
+          selectedLead.data.status ??
+          "lead",
+      );
+
       if (activeFoundingHost) {
         const program = await ensureFoundingHostReferralProgram(uid);
 
-        const referralUrl = `${baseUrl}/host/referrals`;
+        const referralPageUrl = `${baseUrl}/host/referrals`;
 
         subject = "Your KIVO Founding Host referral benefit is ready";
 
         html = activeEmailHtml({
           name,
-          referralUrl,
+          referralUrl: referralPageUrl,
         });
 
         kind = "active_referral_partner";
@@ -348,6 +411,51 @@ export async function GET(request: Request) {
           referralUrl: `${baseUrl}/r/${program.code}`,
           action: dryRun ? "would_send" : "send",
         });
+      } else if (activationStatus === "ready_for_final_approval") {
+        const statusUrl = `${baseUrl}/host/activation`;
+
+        subject =
+          "Your KIVO Host setup is complete — referral benefit reserved";
+
+        html = readyForApprovalEmailHtml({
+          name,
+          statusUrl,
+        });
+
+        kind = "ready_for_final_approval";
+
+        preview.push({
+          email,
+          name,
+          uid: uid || null,
+          status: activationStatus,
+          action: dryRun ? "would_send" : "send",
+          statusUrl,
+        });
+      } else if (
+        activationStatus === "activation_in_progress" ||
+        activationStatus === "approved"
+      ) {
+        const activationUrl = `${baseUrl}/host/activation`;
+
+        subject =
+          "Finish your KIVO Host activation — unlock your referral benefit";
+
+        html = incompleteEmailHtml({
+          name,
+          continueUrl: activationUrl,
+        });
+
+        kind = "activation_referral_incentive";
+
+        preview.push({
+          email,
+          name,
+          uid: uid || null,
+          status: activationStatus,
+          action: dryRun ? "would_send" : "send",
+          continueUrl: activationUrl,
+        });
       } else {
         const continueUrl = onboardingUrl(selectedLead.id, email);
 
@@ -358,17 +466,13 @@ export async function GET(request: Request) {
           continueUrl,
         });
 
-        kind = "activation_referral_incentive";
+        kind = "onboarding_referral_incentive";
 
         preview.push({
           email,
           name,
           uid: uid || null,
-          status:
-            activation?.status ??
-            onboarding?.data.status ??
-            selectedLead.data.status ??
-            "lead",
+          status: activationStatus,
           action: dryRun ? "would_send" : "send",
           continueUrl,
         });
