@@ -405,6 +405,14 @@ export async function GET(request: Request) {
 
       if (!candidate) continue;
 
+      const isTestAccount =
+        candidate.email === "contact@taxaipro.com" ||
+        candidate.name.trim().toUpperCase().startsWith("TEST");
+
+      if (isTestAccount) {
+        continue;
+      }
+
       const existing = candidatesByEmail.get(candidate.email);
 
       candidatesByEmail.set(
