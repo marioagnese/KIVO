@@ -7,6 +7,10 @@ import {
   KIVO_ADMIN_EMAIL,
 } from "@/lib/firebaseAdmin";
 
+import {
+  finalizeFoundingHostReferralActivation,
+} from "@/lib/hostReferrals";
+
 type Coordinates = {
   lng: number;
   lat: number;
@@ -763,6 +767,25 @@ export async function POST(
           };
         }
       );
+
+    /*
+     * Referral bookkeeping must never block a valid
+     * Host activation. Final Host activation remains
+     * the authoritative lifecycle boundary.
+     */
+    try {
+      await finalizeFoundingHostReferralActivation(
+        uid
+      );
+    } catch (referralError) {
+      console.error(
+        "KIVO referral activation bookkeeping failed:",
+        {
+          uid,
+          referralError,
+        }
+      );
+    }
 
     return NextResponse.json({
       ok: true,

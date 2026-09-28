@@ -87,6 +87,16 @@ export async function POST(request: Request) {
               Your Founding Host application has been received. Continue your Host setup now to complete your charger, property and hosting information.
             </p>
 
+            <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:16px;padding:20px;margin:24px 0;">
+              <strong style="display:block;font-size:17px;color:#065f46;margin-bottom:8px;">
+                A new Founding Host benefit
+              </strong>
+
+              <p style="font-size:16px;line-height:1.65;color:#475569;margin:0;">
+                Eligible Hosts in the first 200 can unlock a personal KIVO referral link after activation and earn 15% of KIVO's commission for life from Hosts they directly refer. During the Founding Host cohort, an activated direct Founding Host referral also earns a $20 referral credit.
+              </p>
+            </div>
+
             <a
               href="${continueUrl}"
               style="display:inline-block;background:#34d399;color:#020817;text-decoration:none;font-size:17px;font-weight:800;padding:15px 24px;border-radius:999px;margin:8px 0 24px;"

@@ -70,6 +70,10 @@ function reminderHtml({
             The first 200 approved Founding Hosts receive
             0% KIVO commission for life.
           </strong>
+
+          <p style="font-size:15px;line-height:1.6;color:#475569;margin:12px 0 0;">
+            Once fully activated, eligible Hosts in the first 200 also unlock a personal referral link: 15% of KIVO's commission for life from direct Host referrals, plus a $20 activation credit for each direct Founding Host referral who becomes fully active during the Founding cohort.
+          </p>
         </div>
 
         <a
